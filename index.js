@@ -2,7 +2,7 @@ const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v10');
 const { DisTube } = require('distube');
-const { SoundCloudPlugin } = require('@distube/soundcloud');
+const { YtDlpPlugin } = require('@distube/yt-dlp');
 const { SpotifyPlugin } = require('@distube/spotify');
 const ffmpegStaticPath = require('ffmpeg-static');
 const sodium = require('libsodium-wrappers');
@@ -31,17 +31,11 @@ if (!process.env.DISCORD_TOKEN) {
   process.exit(1);
 }
 
-const soundCloudOptions = {};
-
-if (process.env.SOUNDCLOUD_CLIENT_ID) {
-  soundCloudOptions.clientId = process.env.SOUNDCLOUD_CLIENT_ID;
-}
-
-if (process.env.SOUNDCLOUD_OAUTH_TOKEN) {
-  soundCloudOptions.oauthToken = process.env.SOUNDCLOUD_OAUTH_TOKEN;
-}
-
-const distubePlugins = [new SoundCloudPlugin(soundCloudOptions)];
+const distubePlugins = [
+  new YtDlpPlugin({
+    update: false, // Railway ya tiene yt-dlp instalado, no actualizar en cada inicio
+  }),
+];
 
 if (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET) {
   distubePlugins.unshift(
@@ -50,6 +44,7 @@ if (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET) {
         clientId: process.env.SPOTIFY_CLIENT_ID,
         clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
       },
+      // SpotifyPlugin buscará en YouTube automáticamente via yt-dlp
     })
   );
 }

@@ -35,89 +35,6 @@ function isSoundCloudUrl(value) {
   return isUrl(value) && value.includes('soundcloud.com');
 }
 
-function isYouTubeUrl(value) {
-  return isUrl(value) && (value.includes('youtube.com') || value.includes('youtu.be'));
-}
-
-function getPlugin(client, name) {
-  return client.distube.plugins.find(plugin => plugin?.constructor?.name === name);
-}
-
-async function searchSoundCloudTrack(query, interaction, client) {
-  const soundCloudPlugin = getPlugin(client, 'SoundCloudPlugin');
-  if (!soundCloudPlugin) {
-    throw new Error('No se encontro SoundCloudPlugin en la configuracion del bot.');
-  }
-
-  logVoiceDebug('searching SoundCloud', {
-    guildId: interaction.guildId,
-    query,
-  });
-
-  const song = await soundCloudPlugin.searchSong(query, {
-    member: interaction.member,
-    metadata: { requestedBy: interaction.user.id },
-  });
-
-  if (!song) {
-    throw new Error('No encontre resultados reproducibles en SoundCloud para esa busqueda.');
-  }
-
-  return song;
-}
-
-async function resolveSpotifyTracks(query, interaction, client) {
-  const spotifyPlugin = getPlugin(client, 'SpotifyPlugin');
-  if (!spotifyPlugin) {
-    throw new Error(
-      'Este bot no tiene Spotify configurado. Agrega SPOTIFY_CLIENT_ID y SPOTIFY_CLIENT_SECRET.'
-    );
-  }
-
-  const resolved = await spotifyPlugin.resolve(query, {
-    member: interaction.member,
-    metadata: { requestedBy: interaction.user.id },
-  });
-
-  const sourceSongs = Array.isArray(resolved?.songs) ? resolved.songs : [resolved];
-  const playableSongs = [];
-  const maxTracks = 10;
-
-  for (const song of sourceSongs.slice(0, maxTracks)) {
-    try {
-      const searchQuery = spotifyPlugin.createSearchQuery(song);
-      const playableSong = await searchSoundCloudTrack(searchQuery, interaction, client);
-      if (playableSong) playableSongs.push(playableSong);
-    } catch (error) {
-      logVoiceDebug('spotify song resolution failed', {
-        guildId: interaction.guildId,
-        song: song?.name,
-        message: error.message,
-      });
-    }
-  }
-
-  return playableSongs;
-}
-
-async function resolvePlayableSongs(query, interaction, client) {
-  if (isSpotifyUrl(query)) {
-    return resolveSpotifyTracks(query, interaction, client);
-  }
-
-  if (isYouTubeUrl(query)) {
-    throw new Error(
-      'Los links de YouTube no son compatibles de forma estable en este deploy. Usa una busqueda normal o un link de SoundCloud.'
-    );
-  }
-
-  if (isSoundCloudUrl(query)) {
-    return [query];
-  }
-
-  return [await searchSoundCloudTrack(query, interaction, client)];
-}
-
 function getVoiceJoinError(interaction) {
   const voiceChannel = interaction.member?.voice?.channel;
 
@@ -145,12 +62,40 @@ function getVoiceJoinError(interaction) {
   return null;
 }
 
+// Resuelve cualquier query: texto libre, URL de YouTube, Spotify o SoundCloud.
+// Devuelve el valor que DisTube puede consumir directamente (string URL o string búsqueda).
+// Con YtDlpPlugin, DisTube maneja YouTube, SoundCloud y búsquedas de texto nativamente.
+async function resolveQuery(query, interaction, client) {
+  if (isSpotifyUrl(query)) {
+    const spotifyPlugin = client.distube.plugins.find(
+      p => p?.constructor?.name === 'SpotifyPlugin'
+    );
+
+    if (!spotifyPlugin) {
+      throw new Error(
+        'Este bot no tiene Spotify configurado. Agrega SPOTIFY_CLIENT_ID y SPOTIFY_CLIENT_SECRET.'
+      );
+    }
+
+    // SpotifyPlugin con YtDlpPlugin resuelve automáticamente vía YouTube
+    return query;
+  }
+
+  if (isSoundCloudUrl(query)) {
+    // yt-dlp también soporta URLs de SoundCloud directamente
+    return query;
+  }
+
+  // Búsqueda de texto libre: DisTube + YtDlpPlugin busca en YouTube
+  return query;
+}
+
 const play = {
   data: new SlashCommandBuilder()
     .setName('play')
-    .setDescription('Reproduce musica desde SoundCloud o una busqueda normal')
+    .setDescription('Reproduce musica desde YouTube, Spotify o una busqueda')
     .addStringOption(option =>
-      option.setName('query').setDescription('Nombre o URL').setRequired(true)
+      option.setName('query').setDescription('Nombre, URL de YouTube o Spotify').setRequired(true)
     ),
 
   async execute(interaction, client) {
@@ -174,44 +119,20 @@ const play = {
     }
 
     try {
-      const songs = await resolvePlayableSongs(query, interaction, client);
-      if (!songs.length) {
-        throw new Error('No pude encontrar una fuente reproducible para esa busqueda.');
-      }
+      const resolved = await resolveQuery(query, interaction, client);
 
-      const queue = getQueue(interaction, client);
-      const [firstSong, ...restSongs] = songs;
-
-      if (queue) {
-        queue.addToQueue(songs);
-        await interaction.editReply(
-          songs.length === 1
-            ? `Agregado a la cola: **${firstSong.name || query}**`
-            : `Agregadas ${songs.length} canciones a la cola.`
-        );
-        return;
-      }
-
-      await client.distube.play(voiceChannel, firstSong, {
+      await client.distube.play(voiceChannel, resolved, {
         member: interaction.member,
         textChannel: interaction.channel,
       });
 
-      if (restSongs.length) {
-        client.distube.getQueue(interaction.guildId)?.addToQueue(restSongs);
-      }
-
       logVoiceDebug('play command queued successfully', {
         guildId: interaction.guildId,
         channelId: voiceChannel.id,
-        songs: songs.length,
+        query: resolved,
       });
 
-      await interaction.editReply(
-        songs.length === 1
-          ? `Reproduciendo o encolando: **${firstSong.name || query}**`
-          : `Reproduciendo y agregando ${songs.length} canciones a la cola.`
-      );
+      await interaction.editReply(`Buscando y reproduciendo: **${query}**`);
     } catch (error) {
       console.error('Play error:', error);
       logVoiceDebug('play command failed', {
@@ -228,12 +149,9 @@ const play = {
         return;
       }
 
-      if (
-        error.message.includes('SOUNDCLOUD_PLUGIN_RATE_LIMITED') ||
-        error.message.includes('Reached SoundCloud rate limits')
-      ) {
+      if (error.message.includes('No result')) {
         await interaction.editReply(
-          'SoundCloud esta limitando las reproducciones desde este host. Si quieres mas estabilidad, configura SOUNDCLOUD_CLIENT_ID y opcionalmente SOUNDCLOUD_OAUTH_TOKEN en el deploy.'
+          'No encontre resultados para esa busqueda. Intenta con otro termino o una URL directa de YouTube.'
         );
         return;
       }
