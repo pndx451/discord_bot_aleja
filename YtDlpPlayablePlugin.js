@@ -149,6 +149,21 @@ function isPlaylist(info) {
   return Array.isArray(info?.entries);
 }
 
+function selectPlayableFormat(info) {
+  if (!Array.isArray(info?.formats)) return null;
+
+  const withAudio = info.formats.filter(format => format?.url && format.acodec && format.acodec !== 'none');
+  if (!withAudio.length) return null;
+
+  const audioOnly = withAudio
+    .filter(format => !format.vcodec || format.vcodec === 'none')
+    .sort((a, b) => (b.abr || b.tbr || 0) - (a.abr || a.tbr || 0));
+
+  if (audioOnly.length) return audioOnly[0];
+
+  return withAudio.sort((a, b) => (b.abr || b.tbr || 0) - (a.abr || a.tbr || 0))[0];
+}
+
 class YtDlpPlugin extends PlayableExtractorPlugin {
   async validate() {
     return true;
@@ -189,14 +204,17 @@ class YtDlpPlugin extends PlayableExtractorPlugin {
       throw new DisTubeError('YTDLP_PLUGIN_INVALID_SONG', 'Cannot get stream URL from invalid song.');
     }
 
-    const info = await runYtDlpJson(song.url, {
-      format: 'ba/ba*',
-    }).catch(error => {
+    const info = await runYtDlpJson(song.url).catch(error => {
       throw new DisTubeError('YTDLP_ERROR', String(error.message || error));
     });
 
     if (isPlaylist(info)) {
       throw new DisTubeError('YTDLP_ERROR', 'Cannot get stream URL of a playlist');
+    }
+
+    const selectedFormat = selectPlayableFormat(info);
+    if (selectedFormat?.url) {
+      return selectedFormat.url;
     }
 
     if (!info.url) {
