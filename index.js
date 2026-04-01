@@ -6,7 +6,8 @@ if (process.platform !== 'win32') {
   process.env.YTDLP_URL ??= 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux';
   process.env.YTDLP_FILENAME ??= 'yt-dlp_linux';
 }
-const { YtDlpPlugin, download: downloadYtDlp } = require('@distube/yt-dlp');
+const { download: downloadYtDlp } = require('@distube/yt-dlp');
+const { YtDlpPlugin, ytDlpPath } = require('./YtDlpPlayablePlugin');
 const { SpotifyPlugin } = require('@distube/spotify');
 const ffmpegPath = require('ffmpeg-static');
 require('dotenv').config();
@@ -55,7 +56,7 @@ const client = new Client({
 async function bootstrap() {
   try {
     const ytDlpVersion = await downloadYtDlp();
-    logVoiceDebug('yt-dlp binary ready', { version: ytDlpVersion });
+    logVoiceDebug('yt-dlp binary ready', { version: ytDlpVersion, path: ytDlpPath });
   } catch (error) {
     console.error('No se pudo descargar yt-dlp al iniciar:', error);
   }
