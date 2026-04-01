@@ -31,9 +31,12 @@ if (!process.env.DISCORD_TOKEN) {
   process.exit(1);
 }
 
+const ytDlpPath = process.env.YTDLP_PATH || '/usr/local/bin/yt-dlp';
+
 const distubePlugins = [
   new YtDlpPlugin({
-    update: false, // Railway ya tiene yt-dlp instalado, no actualizar en cada inicio
+    update: false,
+    ytdlpPath: ytDlpPath,
   }),
 ];
 
