@@ -1,4 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
+const ytsr = require('@distube/ytsr');
 
 const ERROR_REPLY = { ephemeral: true };
 const VOICE_DEBUG = process.env.VOICE_DEBUG !== 'false';
@@ -113,13 +114,14 @@ async function resolveQuery(query, interaction, client) {
     return query;
   }
 
-  // Si no es URL, buscar en YouTube y devolver la URL del primer resultado
+  // Si no es URL, buscar en YouTube con ytsr y devolver la URL del primer resultado
   if (!isUrl(query)) {
-    const results = await client.distube.search(query, { limit: 1 });
-    if (!results || results.length === 0) {
+    const results = await ytsr(query, { limit: 1 });
+    const firstVideo = results?.items?.find(i => i.type === 'video');
+    if (!firstVideo) {
       throw new Error(`No encontré resultados para: ${query}`);
     }
-    return results[0].url;
+    return firstVideo.url;
   }
 
   // SoundCloud y YouTube directamente
