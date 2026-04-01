@@ -27,7 +27,17 @@ if (!process.env.DISCORD_TOKEN) {
   process.exit(1);
 }
 
-const distubePlugins = [new SoundCloudPlugin()];
+const soundCloudOptions = {};
+
+if (process.env.SOUNDCLOUD_CLIENT_ID) {
+  soundCloudOptions.clientId = process.env.SOUNDCLOUD_CLIENT_ID;
+}
+
+if (process.env.SOUNDCLOUD_OAUTH_TOKEN) {
+  soundCloudOptions.oauthToken = process.env.SOUNDCLOUD_OAUTH_TOKEN;
+}
+
+const distubePlugins = [new SoundCloudPlugin(soundCloudOptions)];
 
 if (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET) {
   distubePlugins.unshift(

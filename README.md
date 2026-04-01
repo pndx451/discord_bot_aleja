@@ -37,6 +37,8 @@ Completa el archivo `.env`:
 DISCORD_TOKEN=tu_token_de_discord
 SPOTIFY_CLIENT_ID=opcional
 SPOTIFY_CLIENT_SECRET=opcional
+SOUNDCLOUD_CLIENT_ID=opcional
+SOUNDCLOUD_OAUTH_TOKEN=opcional
 ```
 
 ## Uso
@@ -53,6 +55,11 @@ Cuando el bot arranque, registrara los slash commands automaticamente.
 - Busquedas normales: se resuelven en SoundCloud
 - Links de SoundCloud: se reproducen directamente
 - Links de Spotify: se leen como metadata y se buscan coincidencias en SoundCloud
+
+## Recomendado para Railway
+
+- Configura `SOUNDCLOUD_CLIENT_ID` para evitar depender del client id publico autodetectado
+- Si sigues viendo limites, prueba tambien `SOUNDCLOUD_OAUTH_TOKEN`
 
 ## Que no soporta este deploy
 

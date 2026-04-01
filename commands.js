@@ -228,6 +228,16 @@ const play = {
         return;
       }
 
+      if (
+        error.message.includes('SOUNDCLOUD_PLUGIN_RATE_LIMITED') ||
+        error.message.includes('Reached SoundCloud rate limits')
+      ) {
+        await interaction.editReply(
+          'SoundCloud esta limitando las reproducciones desde este host. Si quieres mas estabilidad, configura SOUNDCLOUD_CLIENT_ID y opcionalmente SOUNDCLOUD_OAUTH_TOKEN en el deploy.'
+        );
+        return;
+      }
+
       await interaction.editReply(`Error: ${error.message}`);
     }
   },
