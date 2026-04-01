@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@discordjs/rest": "^2.2.0",
-    "@discordjs/voice": "^0.16.1",
+    "@discordjs/voice": "^0.19.2",
     "@distube/spotify": "^2.0.2",
     "@distube/yt-dlp": "^2.0.1",
     "discord-api-types": "^0.37.83",
