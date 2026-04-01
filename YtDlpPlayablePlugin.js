@@ -150,6 +150,19 @@ function isPlaylist(info) {
   return Array.isArray(info?.entries);
 }
 
+function toPlayableUrl(info) {
+  if (typeof info?.webpage_url === 'string' && info.webpage_url) return info.webpage_url;
+  if (typeof info?.original_url === 'string' && info.original_url) return info.original_url;
+  if (typeof info?.url === 'string' && /^https?:\/\//.test(info.url)) return info.url;
+
+  const extractorKey = String(info?.extractor_key || info?.ie_key || info?.extractor || '').toLowerCase();
+  if (info?.id && extractorKey.includes('youtube')) {
+    return `https://www.youtube.com/watch?v=${info.id}`;
+  }
+
+  return undefined;
+}
+
 function selectPlayableFormat(info) {
   if (!Array.isArray(info?.formats)) return null;
 
@@ -201,11 +214,15 @@ class YtDlpPlugin extends PlayableExtractorPlugin {
   }
 
   async getStreamURL(song) {
-    if (!song.url) {
+    const sourceUrl = song.url || (song.id ? `https://www.youtube.com/watch?v=${song.id}` : undefined);
+
+    if (!sourceUrl) {
       throw new DisTubeError('YTDLP_PLUGIN_INVALID_SONG', 'Cannot get stream URL from invalid song.');
     }
 
-    const info = await runYtDlpJson(song.url).catch(error => {
+    const info = await runYtDlpJson(sourceUrl, {
+      flatPlaylist: false,
+    }).catch(error => {
       throw new DisTubeError('YTDLP_ERROR', String(error.message || error));
     });
 
@@ -239,7 +256,7 @@ class YtDlpSong extends Song {
         playFromSource: true,
         id: String(info.id),
         name: info.title || info.fulltitle,
-        url: info.webpage_url || info.original_url,
+        url: toPlayableUrl(info),
         isLive: Boolean(info.is_live),
         thumbnail: info.thumbnail || info.thumbnails?.[0]?.url,
         duration: info.is_live ? 0 : info.duration,
