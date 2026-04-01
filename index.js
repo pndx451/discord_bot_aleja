@@ -5,6 +5,7 @@ const { DisTube } = require('distube');
 const { SoundCloudPlugin } = require('@distube/soundcloud');
 const { SpotifyPlugin } = require('@distube/spotify');
 const ffmpegPath = require('ffmpeg-static');
+const sodium = require('libsodium-wrappers');
 require('dotenv').config();
 
 process.env.FFMPEG_PATH = ffmpegPath;
@@ -56,6 +57,39 @@ client.distube = new DisTube(client, {
 });
 
 client.distube
+  .on('initQueue', queue => {
+    logVoiceDebug('initQueue', {
+      guildId: queue.id,
+      channelId: queue.voiceChannel?.id,
+      textChannelId: queue.textChannel?.id,
+    });
+
+    queue.voice
+      .on('debug', debug => {
+        logVoiceDebug('queue.voice debug', {
+          guildId: queue.id,
+          debug,
+        });
+      })
+      .on('disconnect', error => {
+        logVoiceDebug('queue.voice disconnect', {
+          guildId: queue.id,
+          message: error?.message,
+        });
+      })
+      .on('error', error => {
+        logVoiceDebug('queue.voice error', {
+          guildId: queue.id,
+          message: error.message,
+          stack: error.stack,
+        });
+      })
+      .on('finish', () => {
+        logVoiceDebug('queue.voice finish', {
+          guildId: queue.id,
+        });
+      });
+  })
   .on('playSong', (queue, song) => {
     logVoiceDebug('playSong', {
       guildId: queue.id,
@@ -72,6 +106,12 @@ client.distube
   })
   .on('finish', queue => {
     queue.textChannel?.send('Cola terminada.');
+  })
+  .on('ffmpegDebug', debug => {
+    logVoiceDebug('ffmpegDebug', debug);
+  })
+  .on('debug', debug => {
+    logVoiceDebug('distubeDebug', debug);
   })
   .on('error', (error, queue, song) => {
     logVoiceDebug('distube error', {
@@ -193,4 +233,13 @@ process.on('uncaughtException', error => {
   console.error('Uncaught exception:', error);
 });
 
-client.login(process.env.DISCORD_TOKEN);
+async function bootstrap() {
+  await sodium.ready;
+  logVoiceDebug('libsodium ready');
+  await client.login(process.env.DISCORD_TOKEN);
+}
+
+bootstrap().catch(error => {
+  console.error('Fallo al iniciar el bot:', error);
+  process.exit(1);
+});
