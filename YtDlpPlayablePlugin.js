@@ -1,4 +1,6 @@
 const path = require('node:path');
+const os = require('node:os');
+const fs = require('node:fs');
 const { spawn } = require('node:child_process');
 const {
   PlayableExtractorPlugin,
@@ -14,6 +16,61 @@ const ytDlpFilename =
   process.env.YTDLP_FILENAME ||
   (process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp_linux');
 const ytDlpPath = path.join(ytDlpDir, ytDlpFilename);
+const cookiesPath = path.join(os.tmpdir(), 'yt-dlp-youtube-cookies.txt');
+
+function parseYouTubeCookies(rawCookies) {
+  if (!rawCookies) return undefined;
+
+  try {
+    const parsed = JSON.parse(rawCookies);
+    if (!Array.isArray(parsed)) return undefined;
+
+    return parsed
+      .filter(cookie => cookie?.name && cookie?.value)
+      .map(cookie => ({
+        domain: cookie.domain,
+        path: cookie.path ?? '/',
+        secure: Boolean(cookie.secure),
+        expires:
+          typeof cookie.expires === 'number'
+            ? cookie.expires
+            : typeof cookie.expirationDate === 'number'
+              ? cookie.expirationDate
+              : 0,
+        name: cookie.name,
+        value: cookie.value,
+      }));
+  } catch {
+    return undefined;
+  }
+}
+
+function getCookiesFile() {
+  const cookies = parseYouTubeCookies(process.env.YOUTUBE_COOKIES);
+  if (!cookies?.length) return undefined;
+
+  const lines = [
+    '# Netscape HTTP Cookie File',
+    ...cookies.map(cookie => {
+      const includeSubdomains = cookie.domain?.startsWith('.') ? 'TRUE' : 'FALSE';
+      const secure = cookie.secure ? 'TRUE' : 'FALSE';
+      const expires = Number.isFinite(cookie.expires) ? Math.floor(cookie.expires) : 0;
+      return [
+        cookie.domain,
+        includeSubdomains,
+        cookie.path,
+        secure,
+        expires,
+        cookie.name,
+        cookie.value,
+      ].join('\t');
+    }),
+    '',
+  ];
+
+  fs.writeFileSync(cookiesPath, lines.join('\n'), 'utf8');
+  return cookiesPath;
+}
 
 function buildArgs(input, flags = {}) {
   const args = [input];
@@ -35,16 +92,17 @@ function buildArgs(input, flags = {}) {
 
 function runYtDlpJson(input, flags = {}) {
   return new Promise((resolve, reject) => {
+    const cookiesFile = getCookiesFile();
     const processHandle = spawn(
       ytDlpPath,
       buildArgs(input, {
         dumpSingleJson: true,
         noWarnings: true,
-        noCallHome: true,
         preferFreeFormats: true,
         skipDownload: true,
         simulate: true,
         quiet: true,
+        cookies: cookiesFile,
         ...flags,
       }),
       {

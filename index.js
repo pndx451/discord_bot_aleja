@@ -2,6 +2,8 @@ const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v10');
 const { DisTube } = require('distube');
+require('dotenv').config();
+
 if (process.platform !== 'win32') {
   process.env.YTDLP_URL ??= 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux';
   process.env.YTDLP_FILENAME ??= 'yt-dlp_linux';
@@ -10,7 +12,6 @@ const { download: downloadYtDlp } = require('@distube/yt-dlp');
 const { YtDlpPlugin, ytDlpPath } = require('./YtDlpPlayablePlugin');
 const { SpotifyPlugin } = require('@distube/spotify');
 const ffmpegPath = require('ffmpeg-static');
-require('dotenv').config();
 
 process.env.FFMPEG_PATH = ffmpegPath;
 const VOICE_DEBUG = process.env.VOICE_DEBUG !== 'false';
