@@ -17,9 +17,28 @@ const ytDlpFilename =
   (process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp_linux');
 const ytDlpPath = path.join(ytDlpDir, ytDlpFilename);
 const cookiesPath = path.join(os.tmpdir(), 'yt-dlp-youtube-cookies.txt');
-const ytExtractorArgs =
-  process.env.YTDLP_EXTRACTOR_ARGS ||
-  'youtube:player_client=tv_downgraded,web_safari,android_vr;formats=missing_pot,incomplete';
+
+function getExtractorArgsCandidates() {
+  const candidates = [];
+
+  if (process.env.YTDLP_EXTRACTOR_ARGS) {
+    candidates.push(process.env.YTDLP_EXTRACTOR_ARGS);
+  }
+
+  candidates.push(
+    undefined,
+    'youtube:player_client=default',
+    'youtube:player_client=default,-web_creator',
+    'youtube:player_client=tv_downgraded,web_safari',
+    'youtube:player_client=android_vr,web_safari',
+    'youtube:player_client=ios,android_vr,web_safari',
+    'youtube:player_client=default;formats=missing_pot,incomplete',
+    'youtube:player_client=tv_downgraded,web_safari;formats=missing_pot,incomplete',
+    'youtube:player_client=android_vr,web_safari;formats=missing_pot,incomplete'
+  );
+
+  return [...new Set(candidates)];
+}
 
 function parseYouTubeCookies(rawCookies) {
   if (!rawCookies) return undefined;
@@ -107,7 +126,6 @@ function runYtDlp(input, flags = {}) {
         simulate: true,
         quiet: true,
         cookies: cookiesFile,
-        extractorArgs: ytExtractorArgs,
         ...flags,
       }),
       {
@@ -230,58 +248,94 @@ class YtDlpPlugin extends PlayableExtractorPlugin {
       throw new DisTubeError('YTDLP_PLUGIN_INVALID_SONG', 'Cannot get stream URL from invalid song.');
     }
 
-    const directUrl = await runYtDlp(sourceUrl, {
-      getUrl: true,
-      format: 'bestaudio/best',
-      flatPlaylist: false,
-    })
-      .then(({ stdout }) =>
-        stdout
-          .split(/\r?\n/)
-          .map(line => line.trim())
-          .find(line => /^https?:\/\//.test(line))
-      )
-      .catch(() => null);
+    let lastError = 'Failed to find any playable formats';
 
-    if (directUrl) {
-      if (process.env.VOICE_DEBUG !== 'false') {
-        console.log('[VOICE] selected yt-dlp direct url');
-      }
-      return directUrl;
-    }
+    for (const extractorArgs of getExtractorArgsCandidates()) {
+      const profileLabel = extractorArgs || 'default';
 
-    const info = await runYtDlpJson(sourceUrl, {
-      allowUnplayableFormats: true,
-      flatPlaylist: false,
-      ignoreNoFormatsError: true,
-    }).catch(error => {
-      throw new DisTubeError('YTDLP_ERROR', String(error.message || error));
-    });
-
-    if (isPlaylist(info)) {
-      throw new DisTubeError('YTDLP_ERROR', 'Cannot get stream URL of a playlist');
-    }
-
-    const selectedFormat = selectPlayableFormat(info);
-    if (selectedFormat?.url) {
-      if (process.env.VOICE_DEBUG !== 'false') {
-        console.log('[VOICE] selected yt-dlp format', {
-          formatId: selectedFormat.format_id,
-          protocol: selectedFormat.protocol,
-          acodec: selectedFormat.acodec,
-          vcodec: selectedFormat.vcodec,
-          abr: selectedFormat.abr,
-          tbr: selectedFormat.tbr,
+      const directUrl = await runYtDlp(sourceUrl, {
+        getUrl: true,
+        format: 'bestaudio/best',
+        flatPlaylist: false,
+        extractorArgs,
+      })
+        .then(({ stdout }) =>
+          stdout
+            .split(/\r?\n/)
+            .map(line => line.trim())
+            .find(line => /^https?:\/\//.test(line))
+        )
+        .catch(error => {
+          lastError = String(error.message || error);
+          if (process.env.VOICE_DEBUG !== 'false') {
+            console.log('[VOICE] yt-dlp direct url attempt failed', {
+              profile: profileLabel,
+              error: lastError.slice(0, 200),
+            });
+          }
+          return null;
         });
+
+      if (directUrl) {
+        if (process.env.VOICE_DEBUG !== 'false') {
+          console.log('[VOICE] selected yt-dlp direct url', {
+            profile: profileLabel,
+          });
+        }
+        return directUrl;
       }
-      return selectedFormat.url;
+
+      const info = await runYtDlpJson(sourceUrl, {
+        allowUnplayableFormats: true,
+        flatPlaylist: false,
+        ignoreNoFormatsError: true,
+        extractorArgs,
+      }).catch(error => {
+        lastError = String(error.message || error);
+        if (process.env.VOICE_DEBUG !== 'false') {
+          console.log('[VOICE] yt-dlp metadata attempt failed', {
+            profile: profileLabel,
+            error: lastError.slice(0, 200),
+          });
+        }
+        return null;
+      });
+
+      if (!info) {
+        continue;
+      }
+
+      if (isPlaylist(info)) {
+        continue;
+      }
+
+      const selectedFormat = selectPlayableFormat(info);
+      if (selectedFormat?.url) {
+        if (process.env.VOICE_DEBUG !== 'false') {
+          console.log('[VOICE] selected yt-dlp format', {
+            profile: profileLabel,
+            formatId: selectedFormat.format_id,
+            protocol: selectedFormat.protocol,
+            acodec: selectedFormat.acodec,
+            vcodec: selectedFormat.vcodec,
+            abr: selectedFormat.abr,
+            tbr: selectedFormat.tbr,
+          });
+        }
+        return selectedFormat.url;
+      }
+
+      if (info.url) {
+        if (process.env.VOICE_DEBUG !== 'false') {
+          console.log('[VOICE] selected yt-dlp fallback info url', {
+            profile: profileLabel,
+          });
+        }
+        return info.url;
+      }
     }
 
-    if (!info.url) {
-      throw new DisTubeError('YTDLP_ERROR', 'Failed to find any playable formats');
-    }
-
-    return info.url;
+    throw new DisTubeError('YTDLP_ERROR', lastError || 'Failed to find any playable formats');
   }
 
   getRelatedSongs() {
