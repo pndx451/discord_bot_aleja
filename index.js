@@ -2,6 +2,10 @@ const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v10');
 const { DisTube } = require('distube');
+if (process.platform !== 'win32') {
+  process.env.YTDLP_URL ??= 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux';
+  process.env.YTDLP_FILENAME ??= 'yt-dlp_linux';
+}
 const { YtDlpPlugin, download: downloadYtDlp } = require('@distube/yt-dlp');
 const { SpotifyPlugin } = require('@distube/spotify');
 const ffmpegPath = require('ffmpeg-static');
