@@ -225,7 +225,9 @@ class YtDlpPlugin extends PlayableExtractorPlugin {
     }
 
     const info = await runYtDlpJson(sourceUrl, {
+      allowUnplayableFormats: true,
       flatPlaylist: false,
+      ignoreNoFormatsError: true,
     }).catch(error => {
       throw new DisTubeError('YTDLP_ERROR', String(error.message || error));
     });
@@ -236,6 +238,16 @@ class YtDlpPlugin extends PlayableExtractorPlugin {
 
     const selectedFormat = selectPlayableFormat(info);
     if (selectedFormat?.url) {
+      if (process.env.VOICE_DEBUG !== 'false') {
+        console.log('[VOICE] selected yt-dlp format', {
+          formatId: selectedFormat.format_id,
+          protocol: selectedFormat.protocol,
+          acodec: selectedFormat.acodec,
+          vcodec: selectedFormat.vcodec,
+          abr: selectedFormat.abr,
+          tbr: selectedFormat.tbr,
+        });
+      }
       return selectedFormat.url;
     }
 
