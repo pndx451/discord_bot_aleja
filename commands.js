@@ -61,10 +61,40 @@ async function resolveWithYtDlp(searchQuery, interaction, client) {
   });
 
   if (Array.isArray(result?.songs) && result.songs.length) {
-    return result.songs[0];
+    return result.songs;
   }
 
   return result;
+}
+
+async function pickFirstPlayableSong(candidates, interaction, client) {
+  const ytDlpPlugin = getPlugin(client, 'YtDlpPlugin');
+  const songs = Array.isArray(candidates) ? candidates : [candidates];
+  let lastError = null;
+
+  for (const song of songs) {
+    try {
+      song.stream ??= { playFromSource: true };
+      song.stream.url = await ytDlpPlugin.getStreamURL(song);
+
+      logVoiceDebug('selected playable candidate', {
+        guildId: interaction.guildId,
+        song: song.name,
+      });
+
+      return song;
+    } catch (error) {
+      lastError = error;
+      logVoiceDebug('candidate stream probe failed', {
+        guildId: interaction.guildId,
+        song: song?.name,
+        message: error.message,
+      });
+    }
+  }
+
+  if (lastError) throw lastError;
+  return null;
 }
 
 async function resolveSpotifyTracks(query, interaction, client) {
@@ -83,8 +113,9 @@ async function resolveSpotifyTracks(query, interaction, client) {
 
   for (const song of sourceSongs) {
     try {
-      const searchQuery = `ytsearch1:${spotifyPlugin.createSearchQuery(song)}`;
-      const playableSong = await resolveWithYtDlp(searchQuery, interaction, client);
+      const searchQuery = `ytsearch5:${spotifyPlugin.createSearchQuery(song)}`;
+      const candidates = await resolveWithYtDlp(searchQuery, interaction, client);
+      const playableSong = await pickFirstPlayableSong(candidates, interaction, client);
       if (playableSong) playableSongs.push(playableSong);
     } catch (error) {
       logVoiceDebug('spotify song resolution failed', {
@@ -111,8 +142,9 @@ async function resolvePlayableSongs(query, interaction, client) {
     return resolveSpotifyTracks(query, interaction, client);
   }
 
-  const ytDlpQuery = isUrl(query) ? query : `ytsearch1:${query}`;
-  const song = await resolveWithYtDlp(ytDlpQuery, interaction, client);
+  const ytDlpQuery = isUrl(query) ? query : `ytsearch5:${query}`;
+  const candidates = await resolveWithYtDlp(ytDlpQuery, interaction, client);
+  const song = await pickFirstPlayableSong(candidates, interaction, client);
   return song ? [song] : [];
 }
 
