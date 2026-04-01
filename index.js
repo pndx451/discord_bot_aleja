@@ -17,9 +17,11 @@ const ffmpegStaticPath = require('ffmpeg-static');
 const sodium = require('libsodium-wrappers');
 require('dotenv').config();
 
+// En Linux usamos el ffmpeg del sistema (más estable en servidores).
+// ffmpeg-static causa SIGSEGV en algunos entornos cloud.
 const ffmpegPath =
   process.env.FFMPEG_PATH ||
-  ffmpegStaticPath;
+  (process.platform === 'linux' ? 'ffmpeg' : ffmpegStaticPath);
 
 process.env.FFMPEG_PATH = ffmpegPath;
 const VOICE_DEBUG = process.env.VOICE_DEBUG !== 'false';
