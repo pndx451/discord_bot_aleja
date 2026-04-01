@@ -54,15 +54,10 @@ const ytDlpArgs = process.env.YOUTUBE_COOKIES
   ? ['--cookies', cookiesFile]
   : [];
 
-const distubePlugins = [
-  new YtDlpPlugin({
-    update: false,
-    ytdlpArgs: ytDlpArgs,
-  }),
-];
+const distubePlugins = [];
 
 if (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET) {
-  // Spotify va DESPUÉS de YtDlpPlugin para que pueda usarlo como extractor de audio
+  // Spotify va ANTES de YtDlpPlugin (YtDlpPlugin debe ser el último)
   distubePlugins.push(
     new SpotifyPlugin({
       api: {
@@ -72,6 +67,14 @@ if (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET) {
     })
   );
 }
+
+// YtDlpPlugin siempre debe ser el último plugin
+distubePlugins.push(
+  new YtDlpPlugin({
+    update: false,
+    ytdlpArgs: ytDlpArgs,
+  })
+);
 
 const client = new Client({
   intents: [
