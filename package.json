@@ -12,7 +12,7 @@
     "@discordjs/rest": "^2.2.0",
     "@discordjs/voice": "^0.19.2",
     "@distube/spotify": "^2.0.2",
-    "@distube/yt-dlp": "^2.0.1",
+    "@distube/youtube": "^1.0.4",
     "discord-api-types": "^0.37.83",
     "discord.js": "^14.26.0",
     "distube": "^5.2.3",

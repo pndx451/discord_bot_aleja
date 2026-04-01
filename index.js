@@ -2,7 +2,7 @@ const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v10');
 const { DisTube } = require('distube');
-const { YtDlpPlugin } = require('@distube/yt-dlp');
+const { YouTubePlugin } = require('@distube/youtube');
 const { SpotifyPlugin } = require('@distube/spotify');
 const ffmpegStaticPath = require('ffmpeg-static');
 const sodium = require('libsodium-wrappers');
@@ -33,9 +33,7 @@ if (!process.env.DISCORD_TOKEN) {
 
 
 const distubePlugins = [
-  new YtDlpPlugin({
-    update: true,
-  }),
+  new YouTubePlugin(),
 ];
 
 if (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET) {
