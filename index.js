@@ -2,7 +2,7 @@ const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v10');
 const { DisTube } = require('distube');
-const { YouTubePlugin } = require('@distube/youtube');
+const { YtDlpPlugin } = require('@distube/yt-dlp');
 const { SpotifyPlugin } = require('@distube/spotify');
 const ffmpegStaticPath = require('ffmpeg-static');
 const sodium = require('libsodium-wrappers');
@@ -32,34 +32,8 @@ if (!process.env.DISCORD_TOKEN) {
 }
 
 
-// Parsea cookies.txt (formato Netscape) desde variable de entorno
-function parseCookiesTxt(raw) {
-  if (!raw) return [];
-  return raw
-    .split('\n')
-    .filter(line => line && !line.startsWith('#'))
-    .map(line => {
-      const parts = line.split('\t');
-      if (parts.length < 7) return null;
-      return {
-        domain: parts[0],
-        httpOnly: parts[1] === 'TRUE',
-        path: parts[2],
-        secure: parts[3] === 'TRUE',
-        expires: Number(parts[4]),
-        name: parts[5],
-        value: parts[6],
-      };
-    })
-    .filter(Boolean);
-}
-
-const youtubeCookies = parseCookiesTxt(process.env.YOUTUBE_COOKIES);
-
 const distubePlugins = [
-  new YouTubePlugin(
-    youtubeCookies.length ? { cookies: youtubeCookies } : {}
-  ),
+  new YtDlpPlugin({ update: false }),
 ];
 
 if (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET) {
