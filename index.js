@@ -2,16 +2,10 @@ const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v10');
 const { DisTube } = require('distube');
-require('dotenv').config();
-
-if (process.platform !== 'win32') {
-  process.env.YTDLP_URL ??= 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux';
-  process.env.YTDLP_FILENAME ??= 'yt-dlp_linux';
-}
-const { download: downloadYtDlp } = require('@distube/yt-dlp');
-const { YtDlpPlugin, ytDlpPath } = require('./YtDlpPlayablePlugin');
+const { SoundCloudPlugin } = require('@distube/soundcloud');
 const { SpotifyPlugin } = require('@distube/spotify');
 const ffmpegPath = require('ffmpeg-static');
+require('dotenv').config();
 
 process.env.FFMPEG_PATH = ffmpegPath;
 const VOICE_DEBUG = process.env.VOICE_DEBUG !== 'false';
@@ -32,9 +26,7 @@ if (!process.env.DISCORD_TOKEN) {
   process.exit(1);
 }
 
-const distubePlugins = [
-  new YtDlpPlugin(),
-];
+const distubePlugins = [new SoundCloudPlugin()];
 
 if (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET) {
   distubePlugins.unshift(
@@ -54,59 +46,48 @@ const client = new Client({
   ],
 });
 
-async function bootstrap() {
-  try {
-    const ytDlpVersion = await downloadYtDlp();
-    logVoiceDebug('yt-dlp binary ready', { version: ytDlpVersion, path: ytDlpPath });
-  } catch (error) {
-    console.error('No se pudo descargar yt-dlp al iniciar:', error);
-  }
+client.distube = new DisTube(client, {
+  emitNewSongOnly: true,
+  joinNewVoiceChannel: true,
+  ffmpeg: {
+    path: ffmpegPath,
+  },
+  plugins: distubePlugins,
+});
 
-  client.distube = new DisTube(client, {
-    emitNewSongOnly: true,
-    joinNewVoiceChannel: true,
-    ffmpeg: {
-      path: ffmpegPath,
-    },
-    plugins: distubePlugins,
-  });
-
-  client.distube
-    .on('playSong', (queue, song) => {
-      logVoiceDebug('playSong', {
-        guildId: queue.id,
-        channelId: queue.voiceChannel?.id,
-        song: song.name,
-      });
-      queue.textChannel?.send(`Reproduciendo: **${song.name}** \`[${song.formattedDuration}]\``);
-    })
-    .on('addSong', (queue, song) => {
-      queue.textChannel?.send(`Agregado: **${song.name}** \`[${song.formattedDuration}]\``);
-    })
-    .on('addList', (queue, playlist) => {
-      queue.textChannel?.send(`Playlist: **${playlist.name}** - ${playlist.songs.length} canciones`);
-    })
-    .on('finish', queue => {
-      queue.textChannel?.send('Cola terminada.');
-    })
-    .on('error', (error, queue, song) => {
-      logVoiceDebug('distube error', {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-        guildId: queue?.id,
-        channelId: queue?.textChannel?.id,
-        song: song?.name,
-      });
-      console.error('DisTube error:', error);
-
-      if (queue?.textChannel?.send) {
-        queue.textChannel.send(`Error: ${error.message}`);
-      }
+client.distube
+  .on('playSong', (queue, song) => {
+    logVoiceDebug('playSong', {
+      guildId: queue.id,
+      channelId: queue.voiceChannel?.id,
+      song: song.name,
     });
+    queue.textChannel?.send(`Reproduciendo: **${song.name}** \`[${song.formattedDuration}]\``);
+  })
+  .on('addSong', (queue, song) => {
+    queue.textChannel?.send(`Agregado: **${song.name}** \`[${song.formattedDuration}]\``);
+  })
+  .on('addList', (queue, playlist) => {
+    queue.textChannel?.send(`Playlist: **${playlist.name}** - ${playlist.songs.length} canciones`);
+  })
+  .on('finish', queue => {
+    queue.textChannel?.send('Cola terminada.');
+  })
+  .on('error', (error, queue, song) => {
+    logVoiceDebug('distube error', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+      guildId: queue?.id,
+      channelId: queue?.textChannel?.id,
+      song: song?.name,
+    });
+    console.error('DisTube error:', error);
 
-  client.login(process.env.DISCORD_TOKEN);
-}
+    if (queue?.textChannel?.send) {
+      queue.textChannel.send(`Error: ${error.message}`);
+    }
+  });
 
 const commands = require('./commands');
 client.commands = new Collection();
@@ -212,7 +193,4 @@ process.on('uncaughtException', error => {
   console.error('Uncaught exception:', error);
 });
 
-bootstrap().catch(error => {
-  console.error('Fallo al iniciar el bot:', error);
-  process.exit(1);
-});
+client.login(process.env.DISCORD_TOKEN);

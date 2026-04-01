@@ -1,12 +1,12 @@
 # Discord Music Bot
 
-Bot de Discord para reproducir musica desde YouTube y Spotify usando slash commands.
+Bot de Discord para reproducir musica usando SoundCloud como fuente de audio y Spotify como fuente de metadata.
 
 ## Comandos
 
 | Comando | Descripcion |
 | --- | --- |
-| `/play [cancion o URL]` | Reproduce o encola una cancion |
+| `/play [cancion o URL]` | Reproduce o encola una cancion desde SoundCloud o una busqueda normal |
 | `/skip` | Salta la cancion actual |
 | `/pause` | Pausa la reproduccion |
 | `/resume` | Reanuda la reproduccion |
@@ -20,7 +20,7 @@ Bot de Discord para reproducir musica desde YouTube y Spotify usando slash comma
 ## Requisitos
 
 - Node.js 22.12.0 o superior
-- Un bot de Discord con permisos `Connect`, `Speak`, `Send Messages` y `Use Application Commands`
+- Un bot de Discord con permisos `View Channel`, `Connect`, `Speak`, `Send Messages` y `Use Application Commands`
 - `DISCORD_TOKEN`
 - `SPOTIFY_CLIENT_ID` y `SPOTIFY_CLIENT_SECRET` solo si usaras enlaces de Spotify
 
@@ -37,11 +37,7 @@ Completa el archivo `.env`:
 DISCORD_TOKEN=tu_token_de_discord
 SPOTIFY_CLIENT_ID=opcional
 SPOTIFY_CLIENT_SECRET=opcional
-YOUTUBE_COOKIES=opcional_json_de_cookies
-YTDLP_EXTRACTOR_ARGS=opcional
 ```
-
-Si YouTube bloquea la reproduccion con mensajes como `Sign in to confirm you’re not a bot`, configura `YOUTUBE_COOKIES` con cookies exportadas de una cuenta secundaria de YouTube en formato JSON.
 
 ## Uso
 
@@ -51,6 +47,17 @@ npm start
 ```
 
 Cuando el bot arranque, registrara los slash commands automaticamente.
+
+## Que si funciona
+
+- Busquedas normales: se resuelven en SoundCloud
+- Links de SoundCloud: se reproducen directamente
+- Links de Spotify: se leen como metadata y se buscan coincidencias en SoundCloud
+
+## Que no soporta este deploy
+
+- Links de YouTube
+- Reproduccion directa desde Spotify
 
 ## Deploy en Railway
 
@@ -62,22 +69,10 @@ Si Railway sigue tomando una version vieja, confirma que:
 - exista `.nvmrc` en la raiz
 - no tengas fijada manualmente una version anterior de Node en variables o settings del servicio
 
-En Linux y Railway, el proyecto fuerza la descarga del binario standalone `yt-dlp_linux` para evitar depender de `python3`.
-
 ## Publicar en GitHub
 
 ```bash
-git init
 git add .
-git commit -m "Initial commit"
-git branch -M main
-git remote add origin https://github.com/TU_USUARIO/TU_REPO.git
-git push -u origin main
+git commit -m "Update bot"
+git push
 ```
-
-`.gitignore` ya excluye `node_modules` y archivos con secretos.
-
-## Notas
-
-- Si no configuras Spotify, el bot seguira funcionando con YouTube.
-- `ffmpeg-static` ya viene como dependencia, asi que no necesitas instalar FFmpeg manualmente para este proyecto.

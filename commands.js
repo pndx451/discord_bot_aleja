@@ -14,14 +14,6 @@ function logVoiceDebug(message, extra) {
   console.log(`[VOICE] ${message}`, extra);
 }
 
-async function replySafely(interaction, payload) {
-  if (interaction.replied || interaction.deferred) {
-    return interaction.editReply(payload);
-  }
-
-  return interaction.reply(payload);
-}
-
 function getQueue(interaction, client) {
   return client.distube.getQueue(interaction.guildId);
 }
@@ -39,68 +31,47 @@ function isSpotifyUrl(value) {
   return isUrl(value) && value.includes('spotify.com');
 }
 
+function isSoundCloudUrl(value) {
+  return isUrl(value) && value.includes('soundcloud.com');
+}
+
+function isYouTubeUrl(value) {
+  return isUrl(value) && (value.includes('youtube.com') || value.includes('youtu.be'));
+}
+
 function getPlugin(client, name) {
   return client.distube.plugins.find(plugin => plugin?.constructor?.name === name);
 }
 
-async function resolveWithYtDlp(searchQuery, interaction, client) {
-  const ytDlpPlugin = getPlugin(client, 'YtDlpPlugin');
-
-  if (!ytDlpPlugin) {
-    throw new Error('No se encontro YtDlpPlugin en la configuracion del bot.');
+async function searchSoundCloudTrack(query, interaction, client) {
+  const soundCloudPlugin = getPlugin(client, 'SoundCloudPlugin');
+  if (!soundCloudPlugin) {
+    throw new Error('No se encontro SoundCloudPlugin en la configuracion del bot.');
   }
 
-  logVoiceDebug('resolving with yt-dlp plugin', {
+  logVoiceDebug('searching SoundCloud', {
     guildId: interaction.guildId,
-    query: searchQuery,
+    query,
   });
 
-  const result = await ytDlpPlugin.resolve(searchQuery, {
+  const song = await soundCloudPlugin.searchSong(query, {
     member: interaction.member,
     metadata: { requestedBy: interaction.user.id },
   });
 
-  if (Array.isArray(result?.songs) && result.songs.length) {
-    return result.songs;
+  if (!song) {
+    throw new Error('No encontre resultados reproducibles en SoundCloud para esa busqueda.');
   }
 
-  return result;
-}
-
-async function pickFirstPlayableSong(candidates, interaction, client) {
-  const ytDlpPlugin = getPlugin(client, 'YtDlpPlugin');
-  const songs = Array.isArray(candidates) ? candidates : [candidates];
-  let lastError = null;
-
-  for (const song of songs) {
-    try {
-      song.stream ??= { playFromSource: true };
-      song.stream.url = await ytDlpPlugin.getStreamURL(song);
-
-      logVoiceDebug('selected playable candidate', {
-        guildId: interaction.guildId,
-        song: song.name,
-      });
-
-      return song;
-    } catch (error) {
-      lastError = error;
-      logVoiceDebug('candidate stream probe failed', {
-        guildId: interaction.guildId,
-        song: song?.name,
-        message: error.message,
-      });
-    }
-  }
-
-  if (lastError) throw lastError;
-  return null;
+  return song;
 }
 
 async function resolveSpotifyTracks(query, interaction, client) {
   const spotifyPlugin = getPlugin(client, 'SpotifyPlugin');
   if (!spotifyPlugin) {
-    throw new Error('No se encontro SpotifyPlugin en la configuracion del bot.');
+    throw new Error(
+      'Este bot no tiene Spotify configurado. Agrega SPOTIFY_CLIENT_ID y SPOTIFY_CLIENT_SECRET.'
+    );
   }
 
   const resolved = await spotifyPlugin.resolve(query, {
@@ -110,12 +81,12 @@ async function resolveSpotifyTracks(query, interaction, client) {
 
   const sourceSongs = Array.isArray(resolved?.songs) ? resolved.songs : [resolved];
   const playableSongs = [];
+  const maxTracks = 10;
 
-  for (const song of sourceSongs) {
+  for (const song of sourceSongs.slice(0, maxTracks)) {
     try {
-      const searchQuery = `ytsearch5:${spotifyPlugin.createSearchQuery(song)}`;
-      const candidates = await resolveWithYtDlp(searchQuery, interaction, client);
-      const playableSong = await pickFirstPlayableSong(candidates, interaction, client);
+      const searchQuery = spotifyPlugin.createSearchQuery(song);
+      const playableSong = await searchSoundCloudTrack(searchQuery, interaction, client);
       if (playableSong) playableSongs.push(playableSong);
     } catch (error) {
       logVoiceDebug('spotify song resolution failed', {
@@ -130,22 +101,21 @@ async function resolveSpotifyTracks(query, interaction, client) {
 }
 
 async function resolvePlayableSongs(query, interaction, client) {
-  const ytDlpPlugin = client.distube.plugins.find(
-    plugin => plugin?.constructor?.name === 'YtDlpPlugin'
-  );
-
-  if (!ytDlpPlugin) {
-    throw new Error('No se encontro YtDlpPlugin en la configuracion del bot.');
-  }
-
   if (isSpotifyUrl(query)) {
     return resolveSpotifyTracks(query, interaction, client);
   }
 
-  const ytDlpQuery = isUrl(query) ? query : `ytsearch5:${query}`;
-  const candidates = await resolveWithYtDlp(ytDlpQuery, interaction, client);
-  const song = await pickFirstPlayableSong(candidates, interaction, client);
-  return song ? [song] : [];
+  if (isYouTubeUrl(query)) {
+    throw new Error(
+      'Los links de YouTube no son compatibles de forma estable en este deploy. Usa una busqueda normal o un link de SoundCloud.'
+    );
+  }
+
+  if (isSoundCloudUrl(query)) {
+    return [query];
+  }
+
+  return [await searchSoundCloudTrack(query, interaction, client)];
 }
 
 function getVoiceJoinError(interaction) {
@@ -156,7 +126,11 @@ function getVoiceJoinError(interaction) {
   }
 
   const permissions = voiceChannel.permissionsFor(interaction.guild.members.me);
-  if (!permissions?.has('Connect')) {
+  if (!permissions?.has('ViewChannel')) {
+    return `No tengo permiso para ver **${voiceChannel.name}**.`;
+  }
+
+  if (!permissions.has('Connect')) {
     return `No tengo permiso para conectarme a **${voiceChannel.name}**.`;
   }
 
@@ -174,7 +148,7 @@ function getVoiceJoinError(interaction) {
 const play = {
   data: new SlashCommandBuilder()
     .setName('play')
-    .setDescription('Reproduce musica desde YouTube o Spotify')
+    .setDescription('Reproduce musica desde SoundCloud o una busqueda normal')
     .addStringOption(option =>
       option.setName('query').setDescription('Nombre o URL').setRequired(true)
     ),
@@ -212,7 +186,7 @@ const play = {
         queue.addToQueue(songs);
         await interaction.editReply(
           songs.length === 1
-            ? `Agregado a la cola: **${firstSong.name}**`
+            ? `Agregado a la cola: **${firstSong.name || query}**`
             : `Agregadas ${songs.length} canciones a la cola.`
         );
         return;
@@ -235,7 +209,7 @@ const play = {
 
       await interaction.editReply(
         songs.length === 1
-          ? `Reproduciendo o encolando: **${firstSong.name}**`
+          ? `Reproduciendo o encolando: **${firstSong.name || query}**`
           : `Reproduciendo y agregando ${songs.length} canciones a la cola.`
       );
     } catch (error) {
@@ -249,7 +223,7 @@ const play = {
 
       if (error.message.includes('Cannot connect to the voice channel after 30 seconds')) {
         await interaction.editReply(
-          'No pude establecer la conexion de voz con Discord. Si el bot esta en Railway, lo mas probable es que el deploy no tenga soporte de red suficiente para Discord Voice.'
+          'No pude establecer la conexion de voz con Discord. Verifica permisos y el estado del canal.'
         );
         return;
       }
