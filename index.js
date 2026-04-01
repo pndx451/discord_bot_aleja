@@ -32,8 +32,22 @@ if (!process.env.DISCORD_TOKEN) {
 }
 
 
+// Si hay cookies configuradas, escribirlas a un archivo para yt-dlp
+const cookiesFile = '/tmp/yt-dlp-cookies.txt';
+if (process.env.YOUTUBE_COOKIES) {
+  require('fs').writeFileSync(cookiesFile, process.env.YOUTUBE_COOKIES);
+  console.log('[YTDLP] Cookies escritas en', cookiesFile);
+}
+
+const ytDlpArgs = process.env.YOUTUBE_COOKIES
+  ? ['--cookies', cookiesFile]
+  : [];
+
 const distubePlugins = [
-  new YtDlpPlugin({ update: false }),
+  new YtDlpPlugin({
+    update: false,
+    ytdlpArgs: ytDlpArgs,
+  }),
 ];
 
 if (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET) {
