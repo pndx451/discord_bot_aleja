@@ -83,6 +83,7 @@ function sanitizeYouTubeUrl(url) {
 // Resuelve cualquier query: texto libre, URL de YouTube, Spotify o SoundCloud.
 async function resolveQuery(query, interaction, client) {
   query = sanitizeYouTubeUrl(query);
+
   if (isSpotifyUrl(query)) {
     const spotifyPlugin = client.distube.plugins.find(
       p => p?.constructor?.name === 'SpotifyPlugin'
@@ -94,16 +95,30 @@ async function resolveQuery(query, interaction, client) {
       );
     }
 
-    // SpotifyPlugin con YtDlpPlugin resuelve automáticamente vía YouTube
+    // Resolver metadata de Spotify y convertir a query de búsqueda para yt-dlp
+    const resolved = await spotifyPlugin.resolve(query, {
+      member: interaction.member,
+      metadata: { requestedBy: interaction.user.id },
+    });
+
+    // Si es una canción individual, buscar por nombre en YouTube via yt-dlp
+    if (resolved && !Array.isArray(resolved?.songs)) {
+      const searchQuery = spotifyPlugin.createSearchQuery
+        ? spotifyPlugin.createSearchQuery(resolved)
+        : `${resolved.name} ${resolved.artists?.[0]?.name || ''}`.trim();
+      return searchQuery;
+    }
+
+    // Si es playlist/album, devolver la URL directamente para que DisTube la procese
     return query;
   }
 
-  if (isSoundCloudUrl(query)) {
-    // yt-dlp también soporta URLs de SoundCloud directamente
-    return query;
+  // Si no es URL, agregar prefijo ytsearch: para que yt-dlp busque en YouTube
+  if (!isUrl(query)) {
+    return `ytsearch:${query}`;
   }
 
-  // Búsqueda de texto libre: DisTube + YtDlpPlugin busca en YouTube
+  // SoundCloud y YouTube directamente
   return query;
 }
 
