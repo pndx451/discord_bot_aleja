@@ -62,13 +62,13 @@ const distubePlugins = [
 ];
 
 if (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET) {
-  distubePlugins.unshift(
+  // Spotify va DESPUÉS de YtDlpPlugin para que pueda usarlo como extractor de audio
+  distubePlugins.push(
     new SpotifyPlugin({
       api: {
         clientId: process.env.SPOTIFY_CLIENT_ID,
         clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
       },
-      // SpotifyPlugin buscará en YouTube automáticamente via yt-dlp
     })
   );
 }
