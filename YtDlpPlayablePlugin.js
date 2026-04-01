@@ -17,6 +17,9 @@ const ytDlpFilename =
   (process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp_linux');
 const ytDlpPath = path.join(ytDlpDir, ytDlpFilename);
 const cookiesPath = path.join(os.tmpdir(), 'yt-dlp-youtube-cookies.txt');
+const ytExtractorArgs =
+  process.env.YTDLP_EXTRACTOR_ARGS ||
+  'youtube:player_client=tv_downgraded,web_safari,android_vr;formats=missing_pot,incomplete';
 
 function parseYouTubeCookies(rawCookies) {
   if (!rawCookies) return undefined;
@@ -104,6 +107,7 @@ function runYtDlpJson(input, flags = {}) {
         simulate: true,
         quiet: true,
         cookies: cookiesFile,
+        extractorArgs: ytExtractorArgs,
         ...flags,
       }),
       {

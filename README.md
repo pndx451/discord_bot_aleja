@@ -38,6 +38,7 @@ DISCORD_TOKEN=tu_token_de_discord
 SPOTIFY_CLIENT_ID=opcional
 SPOTIFY_CLIENT_SECRET=opcional
 YOUTUBE_COOKIES=opcional_json_de_cookies
+YTDLP_EXTRACTOR_ARGS=opcional
 ```
 
 Si YouTube bloquea la reproduccion con mensajes como `Sign in to confirm you’re not a bot`, configura `YOUTUBE_COOKIES` con cookies exportadas de una cuenta secundaria de YouTube en formato JSON.
