@@ -2,7 +2,7 @@ const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v10');
 const { DisTube } = require('distube');
-const { YtDlpPlugin } = require('@distube/yt-dlp');
+const { YtDlpPlugin, download: downloadYtDlp } = require('@distube/yt-dlp');
 const { SpotifyPlugin } = require('@distube/spotify');
 const ffmpegPath = require('ffmpeg-static');
 require('dotenv').config();
@@ -48,48 +48,59 @@ const client = new Client({
   ],
 });
 
-client.distube = new DisTube(client, {
-  emitNewSongOnly: true,
-  joinNewVoiceChannel: true,
-  ffmpeg: {
-    path: ffmpegPath,
-  },
-  plugins: distubePlugins,
-});
+async function bootstrap() {
+  try {
+    const ytDlpVersion = await downloadYtDlp();
+    logVoiceDebug('yt-dlp binary ready', { version: ytDlpVersion });
+  } catch (error) {
+    console.error('No se pudo descargar yt-dlp al iniciar:', error);
+  }
 
-client.distube
-  .on('playSong', (queue, song) => {
-    logVoiceDebug('playSong', {
-      guildId: queue.id,
-      channelId: queue.voiceChannel?.id,
-      song: song.name,
-    });
-    queue.textChannel?.send(`Reproduciendo: **${song.name}** \`[${song.formattedDuration}]\``);
-  })
-  .on('addSong', (queue, song) => {
-    queue.textChannel?.send(`Agregado: **${song.name}** \`[${song.formattedDuration}]\``);
-  })
-  .on('addList', (queue, playlist) => {
-    queue.textChannel?.send(`Playlist: **${playlist.name}** - ${playlist.songs.length} canciones`);
-  })
-  .on('finish', queue => {
-    queue.textChannel?.send('Cola terminada.');
-  })
-  .on('error', (error, queue, song) => {
-    logVoiceDebug('distube error', {
-      name: error.name,
-      message: error.message,
-      stack: error.stack,
-      guildId: queue?.id,
-      channelId: queue?.textChannel?.id,
-      song: song?.name,
-    });
-    console.error('DisTube error:', error);
-
-    if (queue?.textChannel?.send) {
-      queue.textChannel.send(`Error: ${error.message}`);
-    }
+  client.distube = new DisTube(client, {
+    emitNewSongOnly: true,
+    joinNewVoiceChannel: true,
+    ffmpeg: {
+      path: ffmpegPath,
+    },
+    plugins: distubePlugins,
   });
+
+  client.distube
+    .on('playSong', (queue, song) => {
+      logVoiceDebug('playSong', {
+        guildId: queue.id,
+        channelId: queue.voiceChannel?.id,
+        song: song.name,
+      });
+      queue.textChannel?.send(`Reproduciendo: **${song.name}** \`[${song.formattedDuration}]\``);
+    })
+    .on('addSong', (queue, song) => {
+      queue.textChannel?.send(`Agregado: **${song.name}** \`[${song.formattedDuration}]\``);
+    })
+    .on('addList', (queue, playlist) => {
+      queue.textChannel?.send(`Playlist: **${playlist.name}** - ${playlist.songs.length} canciones`);
+    })
+    .on('finish', queue => {
+      queue.textChannel?.send('Cola terminada.');
+    })
+    .on('error', (error, queue, song) => {
+      logVoiceDebug('distube error', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        guildId: queue?.id,
+        channelId: queue?.textChannel?.id,
+        song: song?.name,
+      });
+      console.error('DisTube error:', error);
+
+      if (queue?.textChannel?.send) {
+        queue.textChannel.send(`Error: ${error.message}`);
+      }
+    });
+
+  client.login(process.env.DISCORD_TOKEN);
+}
 
 const commands = require('./commands');
 client.commands = new Collection();
@@ -195,4 +206,7 @@ process.on('uncaughtException', error => {
   console.error('Uncaught exception:', error);
 });
 
-client.login(process.env.DISCORD_TOKEN);
+bootstrap().catch(error => {
+  console.error('Fallo al iniciar el bot:', error);
+  process.exit(1);
+});
