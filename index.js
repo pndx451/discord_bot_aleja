@@ -3,7 +3,6 @@ const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v10');
 const { DisTube } = require('distube');
 const { YtDlpPlugin } = require('@distube/yt-dlp');
-const { YouTubePlugin } = require('@distube/youtube');
 const { SpotifyPlugin } = require('@distube/spotify');
 const ffmpegPath = require('ffmpeg-static');
 require('dotenv').config();
@@ -27,49 +26,7 @@ if (!process.env.DISCORD_TOKEN) {
   process.exit(1);
 }
 
-function parseYouTubeCookies(rawCookies) {
-  if (!rawCookies) return undefined;
-
-  try {
-    const parsed = JSON.parse(rawCookies);
-    if (!Array.isArray(parsed)) return undefined;
-
-    return parsed
-      .filter(cookie => cookie?.name && cookie?.value)
-      .map(cookie => ({
-        name: cookie.name,
-        value: cookie.value,
-        domain: cookie.domain,
-        path: cookie.path ?? '/',
-        secure: Boolean(cookie.secure),
-        httpOnly: Boolean(cookie.httpOnly),
-        sameSite:
-          cookie.sameSite === 'no_restriction'
-            ? 'None'
-            : cookie.sameSite === 'lax' || cookie.sameSite === 'Lax'
-              ? 'Lax'
-              : cookie.sameSite === 'strict' || cookie.sameSite === 'Strict'
-                ? 'Strict'
-                : undefined,
-        expires:
-          typeof cookie.expires === 'number'
-            ? cookie.expires
-            : typeof cookie.expirationDate === 'number'
-              ? cookie.expirationDate
-              : undefined,
-      }));
-  } catch (error) {
-    console.warn('No se pudieron parsear las cookies de YouTube. Deben venir en JSON.');
-    return undefined;
-  }
-}
-
-const youtubeCookies = parseYouTubeCookies(process.env.YOUTUBE_COOKIES);
-
 const distubePlugins = [
-  new YouTubePlugin(
-    youtubeCookies ? { cookies: youtubeCookies } : {}
-  ),
   new YtDlpPlugin(),
 ];
 

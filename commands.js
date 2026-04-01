@@ -40,7 +40,7 @@ function isSpotifyUrl(value) {
 }
 
 async function resolvePlayableInput(query, interaction, client) {
-  if (!isUrl(query) || isSpotifyUrl(query)) {
+  if (isSpotifyUrl(query)) {
     return query;
   }
 
@@ -57,7 +57,9 @@ async function resolvePlayableInput(query, interaction, client) {
     query,
   });
 
-  return ytDlpPlugin.resolve(query, {
+  const ytDlpQuery = isUrl(query) ? query : `ytsearch1:${query}`;
+
+  return ytDlpPlugin.resolve(ytDlpQuery, {
     member: interaction.member,
     metadata: { requestedBy: interaction.user.id },
   });
