@@ -6,7 +6,7 @@ Bot de Discord para reproducir musica usando SoundCloud como fuente de audio y S
 
 | Comando | Descripcion |
 | --- | --- |
-| `/play [cancion o URL]` | Reproduce o encola una cancion desde SoundCloud o una busqueda normal |
+| `/play [cancion o URL]` | Reproduce o encola una cancion desde Youtube, Spotify o una busqueda normal |
 | `/skip` | Salta la cancion actual |
 | `/pause` | Pausa la reproduccion |
 | `/resume` | Reanuda la reproduccion |
@@ -52,8 +52,8 @@ Cuando el bot arranque, registrara los slash commands automaticamente.
 
 ## Que si funciona
 
-- Busquedas normales: se resuelven en SoundCloud
-- Links de SoundCloud: se reproducen directamente
+- Busquedas normales: se resuelven en Youtube
+- Links de Youtube: se reproducen directamente
 - Links de Spotify: se leen como metadata y se buscan coincidencias en SoundCloud
 
 ## Recomendado para Railway
@@ -63,7 +63,7 @@ Cuando el bot arranque, registrara los slash commands automaticamente.
 
 ## Que no soporta este deploy
 
-- Links de YouTube
+
 - Reproduccion directa desde Spotify
 
 ## Deploy en Railway
@@ -78,10 +78,4 @@ Si Railway sigue tomando una version vieja, confirma que:
 
 En Linux y Railway este proyecto usa `ffmpeg` del sistema para evitar crashes del binario `ffmpeg-static`. El archivo `nixpacks.toml` ya pide instalarlo.
 
-## Publicar en GitHub
 
-```bash
-git add .
-git commit -m "Update bot"
-git push
-```
