@@ -32,8 +32,34 @@ if (!process.env.DISCORD_TOKEN) {
 }
 
 
+// Parsea cookies.txt (formato Netscape) desde variable de entorno
+function parseCookiesTxt(raw) {
+  if (!raw) return [];
+  return raw
+    .split('\n')
+    .filter(line => line && !line.startsWith('#'))
+    .map(line => {
+      const parts = line.split('\t');
+      if (parts.length < 7) return null;
+      return {
+        domain: parts[0],
+        httpOnly: parts[1] === 'TRUE',
+        path: parts[2],
+        secure: parts[3] === 'TRUE',
+        expires: Number(parts[4]),
+        name: parts[5],
+        value: parts[6],
+      };
+    })
+    .filter(Boolean);
+}
+
+const youtubeCookies = parseCookiesTxt(process.env.YOUTUBE_COOKIES);
+
 const distubePlugins = [
-  new YouTubePlugin(),
+  new YouTubePlugin(
+    youtubeCookies.length ? { cookies: youtubeCookies } : {}
+  ),
 ];
 
 if (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET) {
