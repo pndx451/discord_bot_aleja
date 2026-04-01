@@ -10,7 +10,7 @@ require('dotenv').config();
 
 const ffmpegPath =
   process.env.FFMPEG_PATH ||
-  (process.platform === 'win32' ? ffmpegStaticPath : 'ffmpeg');
+  ffmpegStaticPath;
 
 process.env.FFMPEG_PATH = ffmpegPath;
 const VOICE_DEBUG = process.env.VOICE_DEBUG !== 'false';
