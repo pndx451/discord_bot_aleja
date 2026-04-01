@@ -61,6 +61,8 @@ Si Railway sigue tomando una version vieja, confirma que:
 - exista `.nvmrc` en la raiz
 - no tengas fijada manualmente una version anterior de Node en variables o settings del servicio
 
+Este proyecto tambien necesita `python3` en Railway para que `yt-dlp` funcione correctamente. El archivo `nixpacks.toml` ya lo solicita durante el build.
+
 ## Publicar en GitHub
 
 ```bash
