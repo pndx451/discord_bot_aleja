@@ -8,6 +8,18 @@ const ffmpegPath = require('ffmpeg-static');
 require('dotenv').config();
 
 process.env.FFMPEG_PATH = ffmpegPath;
+const VOICE_DEBUG = process.env.VOICE_DEBUG !== 'false';
+
+function logVoiceDebug(message, extra) {
+  if (!VOICE_DEBUG) return;
+
+  if (extra === undefined) {
+    console.log(`[VOICE] ${message}`);
+    return;
+  }
+
+  console.log(`[VOICE] ${message}`, extra);
+}
 
 if (!process.env.DISCORD_TOKEN) {
   console.error('Falta la variable de entorno DISCORD_TOKEN.');
@@ -45,6 +57,11 @@ client.distube = new DisTube(client, {
 
 client.distube
   .on('playSong', (queue, song) => {
+    logVoiceDebug('playSong', {
+      guildId: queue.id,
+      channelId: queue.voiceChannel?.id,
+      song: song.name,
+    });
     queue.textChannel?.send(`Reproduciendo: **${song.name}** \`[${song.formattedDuration}]\``);
   })
   .on('addSong', (queue, song) => {
@@ -57,6 +74,11 @@ client.distube
     queue.textChannel?.send('Cola terminada.');
   })
   .on('error', (textChannel, error) => {
+    logVoiceDebug('distube error', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+    });
     console.error('DisTube error:', error);
     textChannel?.send(`Error: ${error.message}`);
   });
@@ -70,6 +92,7 @@ for (const command of commands) {
 
 client.once('ready', async () => {
   console.log(`Bot listo como ${client.user.tag}`);
+  logVoiceDebug('ready', { userId: client.user.id });
 
   const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
@@ -80,6 +103,42 @@ client.once('ready', async () => {
     console.log('Slash commands registrados.');
   } catch (error) {
     console.error('Error registrando comandos:', error);
+  }
+});
+
+client.on('voiceStateUpdate', (oldState, newState) => {
+  const botUserId = client.user?.id;
+  const memberId = newState.id ?? oldState.id;
+
+  if (memberId !== botUserId) return;
+
+  logVoiceDebug('voiceStateUpdate', {
+    guildId: newState.guild.id,
+    oldChannelId: oldState.channelId,
+    newChannelId: newState.channelId,
+    sessionId: newState.sessionId,
+    selfMute: newState.selfMute,
+    selfDeaf: newState.selfDeaf,
+  });
+});
+
+client.on('raw', packet => {
+  const botUserId = client.user?.id;
+
+  if (packet.t === 'VOICE_SERVER_UPDATE') {
+    logVoiceDebug('VOICE_SERVER_UPDATE', {
+      guildId: packet.d.guild_id,
+      endpoint: packet.d.endpoint,
+      tokenPreview: packet.d.token ? `${packet.d.token.slice(0, 8)}...` : null,
+    });
+  }
+
+  if (packet.t === 'VOICE_STATE_UPDATE' && packet.d.user_id === botUserId) {
+    logVoiceDebug('RAW VOICE_STATE_UPDATE', {
+      guildId: packet.d.guild_id,
+      channelId: packet.d.channel_id,
+      sessionId: packet.d.session_id,
+    });
   }
 });
 

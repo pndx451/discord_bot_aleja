@@ -1,6 +1,18 @@
 const { SlashCommandBuilder } = require('discord.js');
 
 const ERROR_REPLY = { ephemeral: true };
+const VOICE_DEBUG = process.env.VOICE_DEBUG !== 'false';
+
+function logVoiceDebug(message, extra) {
+  if (!VOICE_DEBUG) return;
+
+  if (extra === undefined) {
+    console.log(`[VOICE] ${message}`);
+    return;
+  }
+
+  console.log(`[VOICE] ${message}`, extra);
+}
 
 function getQueue(interaction, client) {
   return client.distube.getQueue(interaction.guildId);
@@ -44,6 +56,14 @@ const play = {
     const voiceChannel = interaction.member?.voice?.channel;
     const joinError = getVoiceJoinError(interaction);
 
+    logVoiceDebug('play command received', {
+      guildId: interaction.guildId,
+      channelId: voiceChannel?.id ?? null,
+      channelName: voiceChannel?.name ?? null,
+      query,
+      joinError,
+    });
+
     if (joinError) {
       await interaction.editReply(joinError);
       return;
@@ -55,9 +75,20 @@ const play = {
         textChannel: interaction.channel,
       });
 
+      logVoiceDebug('play command joined voice successfully', {
+        guildId: interaction.guildId,
+        channelId: voiceChannel.id,
+      });
+
       await interaction.editReply(`Buscando: **${query}**`);
     } catch (error) {
       console.error('Play error:', error);
+      logVoiceDebug('play command failed', {
+        guildId: interaction.guildId,
+        channelId: voiceChannel?.id ?? null,
+        message: error.message,
+        stack: error.stack,
+      });
 
       if (error.message.includes('Cannot connect to the voice channel after 30 seconds')) {
         await interaction.editReply(
@@ -223,6 +254,13 @@ const join = {
     const voiceChannel = interaction.member?.voice?.channel;
     const joinError = getVoiceJoinError(interaction);
 
+    logVoiceDebug('join command received', {
+      guildId: interaction.guildId,
+      channelId: voiceChannel?.id ?? null,
+      channelName: voiceChannel?.name ?? null,
+      joinError,
+    });
+
     if (joinError) {
       await interaction.reply({ content: joinError, ...ERROR_REPLY });
       return;
@@ -230,9 +268,19 @@ const join = {
 
     try {
       await client.distube.voices.join(voiceChannel);
+      logVoiceDebug('join command joined voice successfully', {
+        guildId: interaction.guildId,
+        channelId: voiceChannel.id,
+      });
       await interaction.reply(`Conectado a ${voiceChannel.name}`);
     } catch (error) {
       console.error('Join error:', error);
+      logVoiceDebug('join command failed', {
+        guildId: interaction.guildId,
+        channelId: voiceChannel?.id ?? null,
+        message: error.message,
+        stack: error.stack,
+      });
       await interaction.reply({ content: `Error: ${error.message}`, ...ERROR_REPLY });
     }
   },
