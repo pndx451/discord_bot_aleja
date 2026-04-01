@@ -14,6 +14,14 @@ function logVoiceDebug(message, extra) {
   console.log(`[VOICE] ${message}`, extra);
 }
 
+async function replySafely(interaction, payload) {
+  if (interaction.replied || interaction.deferred) {
+    return interaction.editReply(payload);
+  }
+
+  return interaction.reply(payload);
+}
+
 function getQueue(interaction, client) {
   return client.distube.getQueue(interaction.guildId);
 }
@@ -251,6 +259,8 @@ const join = {
   data: new SlashCommandBuilder().setName('join').setDescription('Conecta el bot al canal actual'),
 
   async execute(interaction, client) {
+    await interaction.deferReply({ ephemeral: true });
+
     const voiceChannel = interaction.member?.voice?.channel;
     const joinError = getVoiceJoinError(interaction);
 
@@ -262,7 +272,7 @@ const join = {
     });
 
     if (joinError) {
-      await interaction.reply({ content: joinError, ...ERROR_REPLY });
+      await interaction.editReply({ content: joinError });
       return;
     }
 
@@ -272,7 +282,7 @@ const join = {
         guildId: interaction.guildId,
         channelId: voiceChannel.id,
       });
-      await interaction.reply(`Conectado a ${voiceChannel.name}`);
+      await interaction.editReply(`Conectado a ${voiceChannel.name}`);
     } catch (error) {
       console.error('Join error:', error);
       logVoiceDebug('join command failed', {
@@ -281,7 +291,7 @@ const join = {
         message: error.message,
         stack: error.stack,
       });
-      await interaction.reply({ content: `Error: ${error.message}`, ...ERROR_REPLY });
+      await interaction.editReply({ content: `Error: ${error.message}` });
     }
   },
 };

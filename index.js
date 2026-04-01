@@ -153,6 +153,14 @@ client.on('interactionCreate', async interaction => {
   } catch (error) {
     console.error('Command error:', error);
 
+    if (error.code === 10062) {
+      logVoiceDebug('interaction expired before response', {
+        commandName: interaction.commandName,
+        guildId: interaction.guildId,
+      });
+      return;
+    }
+
     const response = {
       content: `Error: ${error.message}`,
       ephemeral: true,
@@ -165,6 +173,18 @@ client.on('interactionCreate', async interaction => {
 
     await interaction.reply(response);
   }
+});
+
+client.on('error', error => {
+  console.error('Client error:', error);
+});
+
+process.on('unhandledRejection', error => {
+  console.error('Unhandled rejection:', error);
+});
+
+process.on('uncaughtException', error => {
+  console.error('Uncaught exception:', error);
 });
 
 client.login(process.env.DISCORD_TOKEN);
