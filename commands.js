@@ -62,10 +62,27 @@ function getVoiceJoinError(interaction) {
   return null;
 }
 
+// Sanitiza URLs de YouTube: elimina parámetros de Mix/Radio que ytpl no puede resolver.
+function sanitizeYouTubeUrl(url) {
+  try {
+    const parsed = new URL(url);
+    const list = parsed.searchParams.get('list') || '';
+    const startRadio = parsed.searchParams.get('start_radio');
+    const isMix = list.startsWith('RDGMEM') || list.startsWith('RD') || startRadio === '1';
+
+    if (isMix && parsed.searchParams.has('v')) {
+      const videoId = parsed.searchParams.get('v');
+      return `https://www.youtube.com/watch?v=${videoId}`;
+    }
+  } catch {
+    // No es URL, devolver tal cual
+  }
+  return url;
+}
+
 // Resuelve cualquier query: texto libre, URL de YouTube, Spotify o SoundCloud.
-// Devuelve el valor que DisTube puede consumir directamente (string URL o string búsqueda).
-// Con YtDlpPlugin, DisTube maneja YouTube, SoundCloud y búsquedas de texto nativamente.
 async function resolveQuery(query, interaction, client) {
+  query = sanitizeYouTubeUrl(query);
   if (isSpotifyUrl(query)) {
     const spotifyPlugin = client.distube.plugins.find(
       p => p?.constructor?.name === 'SpotifyPlugin'
