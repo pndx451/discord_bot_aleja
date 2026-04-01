@@ -32,7 +32,32 @@ function parseYouTubeCookies(rawCookies) {
 
   try {
     const parsed = JSON.parse(rawCookies);
-    return Array.isArray(parsed) ? parsed : undefined;
+    if (!Array.isArray(parsed)) return undefined;
+
+    return parsed
+      .filter(cookie => cookie?.name && cookie?.value)
+      .map(cookie => ({
+        name: cookie.name,
+        value: cookie.value,
+        domain: cookie.domain,
+        path: cookie.path ?? '/',
+        secure: Boolean(cookie.secure),
+        httpOnly: Boolean(cookie.httpOnly),
+        sameSite:
+          cookie.sameSite === 'no_restriction'
+            ? 'None'
+            : cookie.sameSite === 'lax' || cookie.sameSite === 'Lax'
+              ? 'Lax'
+              : cookie.sameSite === 'strict' || cookie.sameSite === 'Strict'
+                ? 'Strict'
+                : undefined,
+        expires:
+          typeof cookie.expires === 'number'
+            ? cookie.expires
+            : typeof cookie.expirationDate === 'number'
+              ? cookie.expirationDate
+              : undefined,
+      }));
   } catch (error) {
     console.warn('No se pudieron parsear las cookies de YouTube. Deben venir en JSON.');
     return undefined;
