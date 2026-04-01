@@ -93,7 +93,7 @@ function buildArgs(input, flags = {}) {
   return args;
 }
 
-function runYtDlpJson(input, flags = {}) {
+function runYtDlp(input, flags = {}) {
   return new Promise((resolve, reject) => {
     const cookiesFile = getCookiesFile();
     const processHandle = spawn(
@@ -133,20 +133,26 @@ function runYtDlpJson(input, flags = {}) {
         return;
       }
 
-      const output = stdout.trim();
-      const jsonLine =
-        output
-          .split(/\r?\n/)
-          .map(line => line.trim())
-          .filter(Boolean)
-          .find(line => line.startsWith('{') || line.startsWith('[')) || output;
-
-      try {
-        resolve(JSON.parse(jsonLine));
-      } catch (error) {
-        reject(new Error(`Invalid yt-dlp JSON output: ${jsonLine.slice(0, 200)}`));
-      }
+      resolve({ stdout, stderr });
     });
+  });
+}
+
+function runYtDlpJson(input, flags = {}) {
+  return runYtDlp(input, flags).then(({ stdout }) => {
+    const output = stdout.trim();
+    const jsonLine =
+      output
+        .split(/\r?\n/)
+        .map(line => line.trim())
+        .filter(Boolean)
+        .find(line => line.startsWith('{') || line.startsWith('[')) || output;
+
+    try {
+      return JSON.parse(jsonLine);
+    } catch (error) {
+      throw new Error(`Invalid yt-dlp JSON output: ${jsonLine.slice(0, 200)}`);
+    }
   });
 }
 
@@ -222,6 +228,26 @@ class YtDlpPlugin extends PlayableExtractorPlugin {
 
     if (!sourceUrl) {
       throw new DisTubeError('YTDLP_PLUGIN_INVALID_SONG', 'Cannot get stream URL from invalid song.');
+    }
+
+    const directUrl = await runYtDlp(sourceUrl, {
+      getUrl: true,
+      format: 'bestaudio/best',
+      flatPlaylist: false,
+    })
+      .then(({ stdout }) =>
+        stdout
+          .split(/\r?\n/)
+          .map(line => line.trim())
+          .find(line => /^https?:\/\//.test(line))
+      )
+      .catch(() => null);
+
+    if (directUrl) {
+      if (process.env.VOICE_DEBUG !== 'false') {
+        console.log('[VOICE] selected yt-dlp direct url');
+      }
+      return directUrl;
     }
 
     const info = await runYtDlpJson(sourceUrl, {
