@@ -6,6 +6,29 @@ function getQueue(interaction, client) {
   return client.distube.getQueue(interaction.guildId);
 }
 
+function getVoiceJoinError(interaction) {
+  const voiceChannel = interaction.member?.voice?.channel;
+
+  if (!voiceChannel) {
+    return 'Debes estar en un canal de voz.';
+  }
+
+  const permissions = voiceChannel.permissionsFor(interaction.guild.members.me);
+  if (!permissions?.has('Connect')) {
+    return `No tengo permiso para conectarme a **${voiceChannel.name}**.`;
+  }
+
+  if (!permissions.has('Speak')) {
+    return `No tengo permiso para hablar en **${voiceChannel.name}**.`;
+  }
+
+  if (voiceChannel.full && !permissions.has('MoveMembers')) {
+    return `El canal **${voiceChannel.name}** esta lleno y no puedo entrar.`;
+  }
+
+  return null;
+}
+
 const play = {
   data: new SlashCommandBuilder()
     .setName('play')
@@ -19,9 +42,10 @@ const play = {
 
     const query = interaction.options.getString('query', true);
     const voiceChannel = interaction.member?.voice?.channel;
+    const joinError = getVoiceJoinError(interaction);
 
-    if (!voiceChannel) {
-      await interaction.editReply('Debes estar en un canal de voz.');
+    if (joinError) {
+      await interaction.editReply(joinError);
       return;
     }
 
@@ -34,6 +58,14 @@ const play = {
       await interaction.editReply(`Buscando: **${query}**`);
     } catch (error) {
       console.error('Play error:', error);
+
+      if (error.message.includes('Cannot connect to the voice channel after 30 seconds')) {
+        await interaction.editReply(
+          'No pude establecer la conexion de voz con Discord. Si el bot esta en Railway, lo mas probable es que el deploy no tenga soporte de red suficiente para Discord Voice.'
+        );
+        return;
+      }
+
       await interaction.editReply(`Error: ${error.message}`);
     }
   },
@@ -189,9 +221,10 @@ const join = {
 
   async execute(interaction, client) {
     const voiceChannel = interaction.member?.voice?.channel;
+    const joinError = getVoiceJoinError(interaction);
 
-    if (!voiceChannel) {
-      await interaction.reply({ content: 'Debes estar en un canal de voz.', ...ERROR_REPLY });
+    if (joinError) {
+      await interaction.reply({ content: joinError, ...ERROR_REPLY });
       return;
     }
 
