@@ -26,6 +26,43 @@ function getQueue(interaction, client) {
   return client.distube.getQueue(interaction.guildId);
 }
 
+function isUrl(value) {
+  try {
+    new URL(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isSpotifyUrl(value) {
+  return isUrl(value) && value.includes('spotify.com');
+}
+
+async function resolvePlayableInput(query, interaction, client) {
+  if (!isUrl(query) || isSpotifyUrl(query)) {
+    return query;
+  }
+
+  const ytDlpPlugin = client.distube.plugins.find(
+    plugin => plugin?.constructor?.name === 'YtDlpPlugin'
+  );
+
+  if (!ytDlpPlugin) {
+    return query;
+  }
+
+  logVoiceDebug('resolving url with yt-dlp plugin', {
+    guildId: interaction.guildId,
+    query,
+  });
+
+  return ytDlpPlugin.resolve(query, {
+    member: interaction.member,
+    metadata: { requestedBy: interaction.user.id },
+  });
+}
+
 function getVoiceJoinError(interaction) {
   const voiceChannel = interaction.member?.voice?.channel;
 
@@ -78,7 +115,9 @@ const play = {
     }
 
     try {
-      await client.distube.play(voiceChannel, query, {
+      const input = await resolvePlayableInput(query, interaction, client);
+
+      await client.distube.play(voiceChannel, input, {
         member: interaction.member,
         textChannel: interaction.channel,
       });
