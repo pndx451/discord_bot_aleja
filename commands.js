@@ -39,30 +39,81 @@ function isSpotifyUrl(value) {
   return isUrl(value) && value.includes('spotify.com');
 }
 
-async function resolvePlayableInput(query, interaction, client) {
-  if (isSpotifyUrl(query)) {
-    return query;
+function getPlugin(client, name) {
+  return client.distube.plugins.find(plugin => plugin?.constructor?.name === name);
+}
+
+async function resolveWithYtDlp(searchQuery, interaction, client) {
+  const ytDlpPlugin = getPlugin(client, 'YtDlpPlugin');
+
+  if (!ytDlpPlugin) {
+    throw new Error('No se encontro YtDlpPlugin en la configuracion del bot.');
   }
 
+  logVoiceDebug('resolving with yt-dlp plugin', {
+    guildId: interaction.guildId,
+    query: searchQuery,
+  });
+
+  const result = await ytDlpPlugin.resolve(searchQuery, {
+    member: interaction.member,
+    metadata: { requestedBy: interaction.user.id },
+  });
+
+  if (Array.isArray(result?.songs) && result.songs.length) {
+    return result.songs[0];
+  }
+
+  return result;
+}
+
+async function resolveSpotifyTracks(query, interaction, client) {
+  const spotifyPlugin = getPlugin(client, 'SpotifyPlugin');
+  if (!spotifyPlugin) {
+    throw new Error('No se encontro SpotifyPlugin en la configuracion del bot.');
+  }
+
+  const resolved = await spotifyPlugin.resolve(query, {
+    member: interaction.member,
+    metadata: { requestedBy: interaction.user.id },
+  });
+
+  const sourceSongs = Array.isArray(resolved?.songs) ? resolved.songs : [resolved];
+  const playableSongs = [];
+
+  for (const song of sourceSongs) {
+    try {
+      const searchQuery = `ytsearch1:${spotifyPlugin.createSearchQuery(song)}`;
+      const playableSong = await resolveWithYtDlp(searchQuery, interaction, client);
+      if (playableSong) playableSongs.push(playableSong);
+    } catch (error) {
+      logVoiceDebug('spotify song resolution failed', {
+        guildId: interaction.guildId,
+        song: song?.name,
+        message: error.message,
+      });
+    }
+  }
+
+  return playableSongs;
+}
+
+async function resolvePlayableSongs(query, interaction, client) {
   const ytDlpPlugin = client.distube.plugins.find(
     plugin => plugin?.constructor?.name === 'YtDlpPlugin'
   );
 
   if (!ytDlpPlugin) {
-    return query;
+    throw new Error('No se encontro YtDlpPlugin en la configuracion del bot.');
   }
 
-  logVoiceDebug('resolving url with yt-dlp plugin', {
-    guildId: interaction.guildId,
-    query,
-  });
+  if (isSpotifyUrl(query)) {
+    return resolveSpotifyTracks(query, interaction, client);
+  }
 
   const ytDlpQuery = isUrl(query) ? query : `ytsearch1:${query}`;
-
-  return ytDlpPlugin.resolve(ytDlpQuery, {
-    member: interaction.member,
-    metadata: { requestedBy: interaction.user.id },
-  });
+  const song = await resolveWithYtDlp(ytDlpQuery, interaction, client);
+  return song ? [song] : [];
 }
 
 function getVoiceJoinError(interaction) {
@@ -117,19 +168,44 @@ const play = {
     }
 
     try {
-      const input = await resolvePlayableInput(query, interaction, client);
+      const songs = await resolvePlayableSongs(query, interaction, client);
+      if (!songs.length) {
+        throw new Error('No pude encontrar una fuente reproducible para esa busqueda.');
+      }
 
-      await client.distube.play(voiceChannel, input, {
+      const queue = getQueue(interaction, client);
+      const [firstSong, ...restSongs] = songs;
+
+      if (queue) {
+        queue.addToQueue(songs);
+        await interaction.editReply(
+          songs.length === 1
+            ? `Agregado a la cola: **${firstSong.name}**`
+            : `Agregadas ${songs.length} canciones a la cola.`
+        );
+        return;
+      }
+
+      await client.distube.play(voiceChannel, firstSong, {
         member: interaction.member,
         textChannel: interaction.channel,
       });
 
-      logVoiceDebug('play command joined voice successfully', {
+      if (restSongs.length) {
+        client.distube.getQueue(interaction.guildId)?.addToQueue(restSongs);
+      }
+
+      logVoiceDebug('play command queued successfully', {
         guildId: interaction.guildId,
         channelId: voiceChannel.id,
+        songs: songs.length,
       });
 
-      await interaction.editReply(`Buscando: **${query}**`);
+      await interaction.editReply(
+        songs.length === 1
+          ? `Reproduciendo o encolando: **${firstSong.name}**`
+          : `Reproduciendo y agregando ${songs.length} canciones a la cola.`
+      );
     } catch (error) {
       console.error('Play error:', error);
       logVoiceDebug('play command failed', {
