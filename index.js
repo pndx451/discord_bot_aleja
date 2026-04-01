@@ -31,12 +31,10 @@ if (!process.env.DISCORD_TOKEN) {
   process.exit(1);
 }
 
-const ytDlpPath = process.env.YTDLP_PATH || '/usr/local/bin/yt-dlp';
 
 const distubePlugins = [
   new YtDlpPlugin({
-    update: false,
-    ytdlpPath: ytDlpPath,
+    update: true,
   }),
 ];
 
