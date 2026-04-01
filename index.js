@@ -3,6 +3,7 @@ const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v10');
 const { DisTube } = require('distube');
 const { YtDlpPlugin } = require('@distube/yt-dlp');
+const { YouTubePlugin } = require('@distube/youtube');
 const { SpotifyPlugin } = require('@distube/spotify');
 const ffmpegPath = require('ffmpeg-static');
 require('dotenv').config();
@@ -26,7 +27,10 @@ if (!process.env.DISCORD_TOKEN) {
   process.exit(1);
 }
 
-const distubePlugins = [new YtDlpPlugin()];
+const distubePlugins = [
+  new YouTubePlugin(),
+  new YtDlpPlugin(),
+];
 
 if (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET) {
   distubePlugins.unshift(
