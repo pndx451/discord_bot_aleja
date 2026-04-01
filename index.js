@@ -4,9 +4,13 @@ const { Routes } = require('discord-api-types/v10');
 const { DisTube } = require('distube');
 const { SoundCloudPlugin } = require('@distube/soundcloud');
 const { SpotifyPlugin } = require('@distube/spotify');
-const ffmpegPath = require('ffmpeg-static');
+const ffmpegStaticPath = require('ffmpeg-static');
 const sodium = require('libsodium-wrappers');
 require('dotenv').config();
+
+const ffmpegPath =
+  process.env.FFMPEG_PATH ||
+  (process.platform === 'win32' ? ffmpegStaticPath : 'ffmpeg');
 
 process.env.FFMPEG_PATH = ffmpegPath;
 const VOICE_DEBUG = process.env.VOICE_DEBUG !== 'false';
@@ -246,6 +250,7 @@ process.on('uncaughtException', error => {
 async function bootstrap() {
   await sodium.ready;
   logVoiceDebug('libsodium ready');
+  logVoiceDebug('ffmpeg configured', { path: ffmpegPath });
   await client.login(process.env.DISCORD_TOKEN);
 }
 

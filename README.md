@@ -76,6 +76,8 @@ Si Railway sigue tomando una version vieja, confirma que:
 - exista `.nvmrc` en la raiz
 - no tengas fijada manualmente una version anterior de Node en variables o settings del servicio
 
+En Linux y Railway este proyecto usa `ffmpeg` del sistema para evitar crashes del binario `ffmpeg-static`. El archivo `nixpacks.toml` ya pide instalarlo.
+
 ## Publicar en GitHub
 
 ```bash
