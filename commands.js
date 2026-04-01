@@ -113,9 +113,13 @@ async function resolveQuery(query, interaction, client) {
     return query;
   }
 
-  // Si no es URL, agregar prefijo ytsearch: para que yt-dlp busque en YouTube
+  // Si no es URL, buscar en YouTube y devolver la URL del primer resultado
   if (!isUrl(query)) {
-    return `ytsearch:${query}`;
+    const results = await client.distube.search(query, { limit: 1 });
+    if (!results || results.length === 0) {
+      throw new Error(`No encontré resultados para: ${query}`);
+    }
+    return results[0].url;
   }
 
   // SoundCloud y YouTube directamente
