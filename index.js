@@ -1,3 +1,12 @@
+// Monkey-patch child_process.spawn para filtrar --no-call-home antes de que llegue a yt-dlp
+const { spawn: originalSpawn } = require('child_process');
+require('child_process').spawn = function(cmd, args, opts) {
+  if (Array.isArray(args)) {
+    args = args.filter(a => a !== '--no-call-home');
+  }
+  return originalSpawn(cmd, args, opts);
+};
+
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v10');
