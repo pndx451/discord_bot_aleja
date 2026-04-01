@@ -115,7 +115,7 @@ for (const command of commands) {
   client.commands.set(command.data.name, command);
 }
 
-client.once('ready', async () => {
+client.once('clientReady', async () => {
   console.log(`Bot listo como ${client.user.tag}`);
   logVoiceDebug('ready', { userId: client.user.id });
 

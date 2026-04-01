@@ -99,6 +99,7 @@ function runYtDlpJson(input, flags = {}) {
         dumpSingleJson: true,
         noWarnings: true,
         preferFreeFormats: true,
+        flatPlaylist: true,
         skipDownload: true,
         simulate: true,
         quiet: true,
