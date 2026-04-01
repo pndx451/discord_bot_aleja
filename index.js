@@ -73,14 +73,20 @@ client.distube
   .on('finish', queue => {
     queue.textChannel?.send('Cola terminada.');
   })
-  .on('error', (textChannel, error) => {
+  .on('error', (error, queue, song) => {
     logVoiceDebug('distube error', {
       name: error.name,
       message: error.message,
       stack: error.stack,
+      guildId: queue?.id,
+      channelId: queue?.textChannel?.id,
+      song: song?.name,
     });
     console.error('DisTube error:', error);
-    textChannel?.send(`Error: ${error.message}`);
+
+    if (queue?.textChannel?.send) {
+      queue.textChannel.send(`Error: ${error.message}`);
+    }
   });
 
 const commands = require('./commands');
