@@ -57,9 +57,11 @@ function parseCookiesTxt(raw) {
 const youtubeCookies = parseCookiesTxt(process.env.YOUTUBE_COOKIES);
 
 const distubePlugins = [
-  new YouTubePlugin(
-    youtubeCookies.length ? { cookies: youtubeCookies } : {}
-  ),
+  new YouTubePlugin({
+    ...(youtubeCookies.length ? { cookies: youtubeCookies } : {}),
+    // Forzar formato de audio puro para evitar "Failed to find any playable formats"
+    quality: 'highestaudio',
+  }),
 ];
 
 if (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET) {
