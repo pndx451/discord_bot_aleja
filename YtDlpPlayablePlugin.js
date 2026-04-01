@@ -7,7 +7,8 @@ const {
   Playlist,
 } = require('distube');
 
-const ytDlpPackageDir = path.dirname(require.resolve('@distube/yt-dlp/package.json'));
+const ytDlpMainPath = require.resolve('@distube/yt-dlp');
+const ytDlpPackageDir = path.resolve(path.dirname(ytDlpMainPath), '..');
 const ytDlpDir = process.env.YTDLP_DIR || path.join(ytDlpPackageDir, 'bin');
 const ytDlpFilename =
   process.env.YTDLP_FILENAME ||
