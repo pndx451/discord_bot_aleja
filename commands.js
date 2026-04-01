@@ -102,16 +102,20 @@ async function resolveQuery(query, interaction, client) {
       metadata: { requestedBy: interaction.user.id },
     });
 
-    // Si es una canción individual, buscar por nombre en YouTube via yt-dlp
+    // Si es una canción individual, buscar en YouTube con ytsr
     if (resolved && !Array.isArray(resolved?.songs)) {
       const searchQuery = spotifyPlugin.createSearchQuery
         ? spotifyPlugin.createSearchQuery(resolved)
         : `${resolved.name} ${resolved.artists?.[0]?.name || ''}`.trim();
-      return searchQuery;
+      const results = await ytsr(searchQuery, { limit: 1 });
+      const firstVideo = results?.items?.find(i => i.type === 'video');
+      if (!firstVideo) throw new Error(`No encontré resultados para: ${searchQuery}`);
+      return firstVideo.url;
     }
 
-    // Si es playlist/album, devolver la URL directamente para que DisTube la procese
-    return query;
+    // Si es playlist/album, buscar cada canción individualmente no es viable,
+    // intentar pasar la URL directamente (puede fallar con DRM)
+    throw new Error('Las playlists y álbumes de Spotify no están soportados. Usá un link de canción individual.');
   }
 
   // Si no es URL, buscar en YouTube con ytsr y devolver la URL del primer resultado
