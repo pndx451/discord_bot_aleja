@@ -44,13 +44,27 @@ if (!process.env.DISCORD_TOKEN) {
 
 
 // Si hay cookies configuradas, escribirlas a un archivo para yt-dlp
+// Soporta tanto texto plano (YOUTUBE_COOKIES) como base64 (YOUTUBE_COOKIES_B64)
 const cookiesFile = '/tmp/yt-dlp-cookies.txt';
-if (process.env.YOUTUBE_COOKIES) {
-  require('fs').writeFileSync(cookiesFile, process.env.YOUTUBE_COOKIES);
-  console.log('[YTDLP] Cookies escritas en', cookiesFile);
+const fs = require('fs');
+
+let cookiesRaw = null;
+if (process.env.YOUTUBE_COOKIES_B64) {
+  cookiesRaw = Buffer.from(process.env.YOUTUBE_COOKIES_B64, 'base64').toString('utf8');
+  console.log('[YTDLP] Cookies decodificadas desde YOUTUBE_COOKIES_B64');
+} else if (process.env.YOUTUBE_COOKIES) {
+  cookiesRaw = process.env.YOUTUBE_COOKIES;
+  console.log('[YTDLP] Cookies leidas desde YOUTUBE_COOKIES');
 }
 
-const ytDlpArgs = process.env.YOUTUBE_COOKIES
+if (cookiesRaw) {
+  fs.writeFileSync(cookiesFile, cookiesRaw);
+  const lines = cookiesRaw.split('
+').filter(l => l && !l.startsWith('#')).length;
+  console.log('[YTDLP] Cookies escritas en', cookiesFile, '(' + lines + ' entradas)');
+}
+
+const ytDlpArgs = cookiesRaw
   ? ['--cookies', cookiesFile]
   : [];
 
