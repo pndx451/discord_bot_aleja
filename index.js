@@ -59,8 +59,7 @@ if (process.env.YOUTUBE_COOKIES_B64) {
 
 if (cookiesRaw) {
   fs.writeFileSync(cookiesFile, cookiesRaw);
-  const lines = cookiesRaw.split('
-').filter(l => l && !l.startsWith('#')).length;
+  const lines = cookiesRaw.split('\n').filter(l => l && !l.startsWith('#')).length;
   console.log('[YTDLP] Cookies escritas en', cookiesFile, '(' + lines + ' entradas)');
 }
 
