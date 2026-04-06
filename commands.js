@@ -96,26 +96,46 @@ async function resolveQuery(query, interaction, client) {
       );
     }
 
-    // Resolver metadata de Spotify y convertir a query de búsqueda para yt-dlp
+    // Resolver metadata de Spotify
     const resolved = await spotifyPlugin.resolve(query, {
       member: interaction.member,
       metadata: { requestedBy: interaction.user.id },
     });
 
-    // Si es una canción individual, buscar en YouTube con ytsr
-    if (resolved && !Array.isArray(resolved?.songs)) {
+    // Helper: buscar una canción en YouTube
+    async function spotifyTrackToYouTubeUrl(song) {
       const searchQuery = spotifyPlugin.createSearchQuery
-        ? spotifyPlugin.createSearchQuery(resolved)
-        : `${resolved.name} ${resolved.artists?.[0]?.name || ''}`.trim();
+        ? spotifyPlugin.createSearchQuery(song)
+        : `${song.name} ${song.artists?.[0]?.name || ''}`.trim();
       const results = await ytsr(searchQuery, { limit: 1 });
       const firstVideo = results?.items?.find(i => i.type === 'video');
-      if (!firstVideo) throw new Error(`No encontré resultados para: ${searchQuery}`);
-      return firstVideo.url;
+      return firstVideo?.url || null;
     }
 
-    // Si es playlist/album, buscar cada canción individualmente no es viable,
-    // intentar pasar la URL directamente (puede fallar con DRM)
-    throw new Error('Las playlists y álbumes de Spotify no están soportados. Usá un link de canción individual.');
+    // Canción individual
+    if (resolved && !resolved.songs) {
+      const url = await spotifyTrackToYouTubeUrl(resolved);
+      if (!url) throw new Error(`No encontré resultados en YouTube para esta canción de Spotify.`);
+      return url;
+    }
+
+    // Playlist o álbum: devolver array de URLs
+    if (resolved?.songs?.length) {
+      const MAX_TRACKS = 50;
+      const tracks = resolved.songs.slice(0, MAX_TRACKS);
+      await interaction.editReply(
+        `Buscando **${tracks.length}** canciones de la playlist **${resolved.name}**... esto puede tardar unos segundos.`
+      );
+      const urls = [];
+      for (const song of tracks) {
+        const url = await spotifyTrackToYouTubeUrl(song);
+        if (url) urls.push(url);
+      }
+      if (!urls.length) throw new Error('No pude encontrar ninguna canción de la playlist en YouTube.');
+      return urls;
+    }
+
+    throw new Error('No pude resolver este link de Spotify.');
   }
 
   // Si no es URL, buscar en YouTube con ytsr y devolver la URL del primer resultado
@@ -163,6 +183,38 @@ const play = {
     try {
       const resolved = await resolveQuery(query, interaction, client);
 
+      // Playlist de Spotify: array de URLs
+      if (Array.isArray(resolved)) {
+        const [first, ...rest] = resolved;
+        await client.distube.play(voiceChannel, first, {
+          member: interaction.member,
+          textChannel: interaction.channel,
+        });
+        // Encolar el resto después de que la queue exista
+        if (rest.length) {
+          let attempts = 0;
+          const enqueueRest = setInterval(async () => {
+            const queue = client.distube.getQueue(interaction.guildId);
+            if (queue || attempts++ > 10) {
+              clearInterval(enqueueRest);
+              if (queue) {
+                for (const url of rest) {
+                  try {
+                    await client.distube.play(voiceChannel, url, {
+                      member: interaction.member,
+                      textChannel: interaction.channel,
+                    });
+                  } catch {}
+                }
+              }
+            }
+          }, 500);
+        }
+        await interaction.editReply(`Encoladas **${resolved.length}** canciones de la playlist.`);
+        return;
+      }
+
+      // Canción individual o URL directa
       await client.distube.play(voiceChannel, resolved, {
         member: interaction.member,
         textChannel: interaction.channel,
