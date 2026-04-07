@@ -63,9 +63,12 @@ if (cookiesRaw) {
   console.log('[YTDLP] Cookies escritas en', cookiesFile, '(' + lines + ' entradas)');
 }
 
-const ytDlpArgs = cookiesRaw
-  ? ['--cookies', cookiesFile]
-  : [];
+const ytDlpArgs = [
+  '--no-check-certificate',
+  '--geo-bypass',
+  '--extractor-retries', '3',
+  ...(cookiesRaw ? ['--cookies', cookiesFile] : []),
+];
 
 const distubePlugins = [];
 
