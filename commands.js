@@ -119,20 +119,20 @@ async function resolveQuery(query, interaction, client) {
       return url;
     }
 
-    // Playlist o álbum: devolver array de URLs
+    // Playlist o álbum: buscar en paralelo (más rápido, evita timeout de Discord)
     if (resolved?.songs?.length) {
       const MAX_TRACKS = 50;
       const tracks = resolved.songs.slice(0, MAX_TRACKS);
-      await interaction.editReply(
-        `Buscando **${tracks.length}** canciones de la playlist **${resolved.name}**... esto puede tardar unos segundos.`
-      );
+      // Buscar todas en paralelo con límite de concurrencia para no saturar ytsr
+      const CONCURRENCY = 5;
       const urls = [];
-      for (const song of tracks) {
-        const url = await spotifyTrackToYouTubeUrl(song);
-        if (url) urls.push(url);
+      for (let i = 0; i < tracks.length; i += CONCURRENCY) {
+        const batch = tracks.slice(i, i + CONCURRENCY);
+        const results = await Promise.all(batch.map(s => spotifyTrackToYouTubeUrl(s).catch(() => null)));
+        urls.push(...results.filter(Boolean));
       }
       if (!urls.length) throw new Error('No pude encontrar ninguna canción de la playlist en YouTube.');
-      return urls;
+      return { urls, name: resolved.name };
     }
 
     throw new Error('No pude resolver este link de Spotify.');
@@ -183,34 +183,36 @@ const play = {
     try {
       const resolved = await resolveQuery(query, interaction, client);
 
-      // Playlist de Spotify: array de URLs
-      if (Array.isArray(resolved)) {
-        const [first, ...rest] = resolved;
+      // Playlist de Spotify: { urls, name }
+      if (resolved && resolved.urls) {
+        const { urls, name } = resolved;
+        const [first, ...rest] = urls;
         await client.distube.play(voiceChannel, first, {
           member: interaction.member,
           textChannel: interaction.channel,
         });
-        // Encolar el resto después de que la queue exista
+        // Encolar el resto en paralelo por lotes
         if (rest.length) {
-          let attempts = 0;
-          const enqueueRest = setInterval(async () => {
-            const queue = client.distube.getQueue(interaction.guildId);
-            if (queue || attempts++ > 10) {
-              clearInterval(enqueueRest);
-              if (queue) {
-                for (const url of rest) {
-                  try {
-                    await client.distube.play(voiceChannel, url, {
-                      member: interaction.member,
-                      textChannel: interaction.channel,
-                    });
-                  } catch {}
-                }
-              }
+          (async () => {
+            // Esperar a que la queue exista
+            let queue = null;
+            for (let i = 0; i < 20; i++) {
+              queue = client.distube.getQueue(interaction.guildId);
+              if (queue) break;
+              await new Promise(r => setTimeout(r, 300));
             }
-          }, 500);
+            if (!queue) return;
+            for (const url of rest) {
+              try {
+                await client.distube.play(voiceChannel, url, {
+                  member: interaction.member,
+                  textChannel: interaction.channel,
+                });
+              } catch {}
+            }
+          })();
         }
-        await interaction.editReply(`Encoladas **${resolved.length}** canciones de la playlist.`);
+        await interaction.editReply(`Encolando **${urls.length}** canciones de **${name}** 🎵`);
         return;
       }
 
