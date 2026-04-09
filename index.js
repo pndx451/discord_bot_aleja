@@ -70,6 +70,18 @@ const ytDlpArgs = [
   ...(cookiesRaw ? ['--cookies', cookiesFile] : []),
 ];
 
+// Debug: verificar cookies al arrancar
+if (cookiesRaw) {
+  try {
+    const stat = fs.statSync(cookiesFile);
+    console.log('[YTDLP] Cookies OK - archivo:', stat.size, 'bytes - args:', ytDlpArgs.join(' '));
+  } catch (e) {
+    console.error('[YTDLP] ERROR verificando cookies:', e.message);
+  }
+} else {
+  console.warn('[YTDLP] SIN COOKIES - configura YOUTUBE_COOKIES o YOUTUBE_COOKIES_B64 en Railway');
+}
+
 const distubePlugins = [];
 
 if (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET) {
