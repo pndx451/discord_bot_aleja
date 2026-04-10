@@ -160,16 +160,65 @@ client.distube
       channelId: queue.voiceChannel?.id,
       song: song.name,
     });
-    queue.textChannel?.send(`Reproduciendo: **${song.name}** \`[${song.formattedDuration}]\``);
+
+    const { EmbedBuilder } = require('discord.js');
+    const requestedBy = song.metadata?.requestedBy
+      ? `<@${song.metadata.requestedBy}>`
+      : null;
+
+    const embed = new EmbedBuilder()
+      .setColor(0x1DB954)
+      .setAuthor({ name: '▶  Reproduciendo ahora' })
+      .setTitle(song.name || 'Desconocido')
+      .setURL(song.url || null)
+      .setThumbnail(song.thumbnail || null)
+      .addFields(
+        { name: '⏱ Duración', value: song.formattedDuration || '?', inline: true },
+        { name: '🔊 Canal', value: queue.voiceChannel?.name || '?', inline: true },
+      );
+
+    if (requestedBy) embed.addFields({ name: '👤 Pedido por', value: requestedBy, inline: true });
+    if (queue.songs.length > 1) embed.setFooter({ text: `${queue.songs.length - 1} canción(es) en cola` });
+
+    queue.textChannel?.send({ embeds: [embed] });
   })
   .on('addSong', (queue, song) => {
-    queue.textChannel?.send(`Agregado: **${song.name}** \`[${song.formattedDuration}]\``);
+    const { EmbedBuilder } = require('discord.js');
+    const position = queue.songs.length - 1;
+
+    const embed = new EmbedBuilder()
+      .setColor(0x5865F2)
+      .setAuthor({ name: '➕  Agregado a la cola' })
+      .setTitle(song.name || 'Desconocido')
+      .setURL(song.url || null)
+      .setThumbnail(song.thumbnail || null)
+      .addFields(
+        { name: '⏱ Duración', value: song.formattedDuration || '?', inline: true },
+        { name: '📋 Posición', value: `#${position}`, inline: true },
+      );
+
+    queue.textChannel?.send({ embeds: [embed] });
   })
   .on('addList', (queue, playlist) => {
-    queue.textChannel?.send(`Playlist: **${playlist.name}** - ${playlist.songs.length} canciones`);
+    const { EmbedBuilder } = require('discord.js');
+
+    const embed = new EmbedBuilder()
+      .setColor(0x5865F2)
+      .setAuthor({ name: '📋  Playlist agregada' })
+      .setTitle(playlist.name || 'Playlist')
+      .setThumbnail(playlist.thumbnail || playlist.songs[0]?.thumbnail || null)
+      .addFields(
+        { name: '🎵 Canciones', value: `${playlist.songs.length}`, inline: true },
+      );
+
+    queue.textChannel?.send({ embeds: [embed] });
   })
   .on('finish', queue => {
-    queue.textChannel?.send('Cola terminada.');
+    const { EmbedBuilder } = require('discord.js');
+    const embed = new EmbedBuilder()
+      .setColor(0x747F8D)
+      .setDescription('✅ Cola terminada. ¡Hasta la próxima!');
+    queue.textChannel?.send({ embeds: [embed] });
   })
   .on('ffmpegDebug', debug => {
     logVoiceDebug('ffmpegDebug', debug);
