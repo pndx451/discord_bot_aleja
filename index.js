@@ -17,6 +17,15 @@ if (!process.env.LAVALINK_HOST || !process.env.LAVALINK_PASSWORD) {
   process.exit(1);
 }
 
+const configuredDefaultSearchEngine = (process.env.DEFAULT_SEARCH_ENGINE || 'soundcloud').toLowerCase();
+const defaultSearchEngine = ['soundcloud', 'youtube'].includes(configuredDefaultSearchEngine)
+  ? configuredDefaultSearchEngine
+  : 'soundcloud';
+
+if (configuredDefaultSearchEngine !== defaultSearchEngine) {
+  console.warn(`[SEARCH] DEFAULT_SEARCH_ENGINE="${configuredDefaultSearchEngine}" no es valido. Usando "${defaultSearchEngine}".`);
+}
+
 // ─── Cliente de Discord ───────────────────────────────────────────────────────
 const client = new Client({
   intents: [
@@ -52,7 +61,7 @@ if (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET) {
 // ─── Kazagumo (queue manager sobre Shoukaku) ──────────────────────────────────
 client.kazagumo = new Kazagumo(
   {
-    defaultSearchEngine: 'youtube',
+    defaultSearchEngine,
     send: (guildId, payload) => {
       const guild = client.guilds.cache.get(guildId);
       if (guild) guild.shard.send(payload);
@@ -71,6 +80,7 @@ client.kazagumo = new Kazagumo(
     userAgent: 'discord-music-bot/1.0',
   }
 );
+client.defaultSearchEngine = defaultSearchEngine;
 
 // ─── Eventos de Kazagumo ─────────────────────────────────────────────────────
 client.kazagumo

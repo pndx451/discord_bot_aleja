@@ -40,6 +40,16 @@ async function getOrCreatePlayer(interaction, client) {
   return player;
 }
 
+function resolveSearchEngine(query, defaultSearchEngine = 'soundcloud') {
+  const normalizedQuery = query.toLowerCase();
+
+  if (normalizedQuery.includes('spotify.com')) return 'spotify';
+  if (normalizedQuery.includes('youtu')) return 'youtube';
+  if (normalizedQuery.includes('soundcloud.com')) return 'soundcloud';
+
+  return defaultSearchEngine;
+}
+
 // ─── /play ───────────────────────────────────────────────────────────────────
 const play = {
   data: new SlashCommandBuilder()
@@ -61,10 +71,7 @@ const play = {
       const player = await getOrCreatePlayer(interaction, client);
 
       // Determinar el engine correcto según el tipo de query
-      let searchEngine = 'youtube';
-      if (query.includes('spotify.com')) searchEngine = 'spotify';
-      else if (query.includes('youtu')) searchEngine = 'youtube';
-      else if (query.includes('soundcloud.com')) searchEngine = 'soundcloud';
+      const searchEngine = resolveSearchEngine(query, client.defaultSearchEngine || 'soundcloud');
 
       const result = await client.kazagumo.search(query, {
         requester: interaction.user,

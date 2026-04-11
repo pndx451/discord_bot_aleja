@@ -1,6 +1,6 @@
 # Discord Music Bot
 
-Bot de Discord para reproducir musica usando SoundCloud como fuente de audio y Spotify como fuente de metadata.
+Bot de Discord para reproducir musica usando SoundCloud como fuente de audio por defecto y Spotify como fuente de metadata.
 
 ## Comandos
 
@@ -22,6 +22,7 @@ Bot de Discord para reproducir musica usando SoundCloud como fuente de audio y S
 - Node.js 22.12.0 o superior
 - Un bot de Discord con permisos `View Channel`, `Connect`, `Speak`, `Send Messages` y `Use Application Commands`
 - `DISCORD_TOKEN`
+- `LAVALINK_HOST`, `LAVALINK_PASSWORD` y opcionalmente `LAVALINK_PORT`
 - `SPOTIFY_CLIENT_ID` y `SPOTIFY_CLIENT_SECRET` solo si usaras enlaces de Spotify
 
 ## Instalacion
@@ -35,6 +36,11 @@ Completa el archivo `.env`:
 
 ```env
 DISCORD_TOKEN=tu_token_de_discord
+LAVALINK_HOST=localhost
+LAVALINK_PORT=2333
+LAVALINK_PASSWORD=youshallnotpass
+LAVALINK_SECURE=false
+DEFAULT_SEARCH_ENGINE=soundcloud
 SPOTIFY_CLIENT_ID=opcional
 SPOTIFY_CLIENT_SECRET=opcional
 SOUNDCLOUD_CLIENT_ID=opcional
@@ -52,9 +58,16 @@ Cuando el bot arranque, registrara los slash commands automaticamente.
 
 ## Que si funciona
 
-- Busquedas normales: se resuelven en Youtube
+- Busquedas normales: se resuelven en SoundCloud por defecto
 - Links de Youtube: se reproducen directamente
 - Links de Spotify: se leen como metadata y se buscan coincidencias en SoundCloud
+
+## Nota sobre Lavalink y YouTube
+
+Si Lavalink muestra `This video requires login`, el problema no esta en Discord ni en Kazagumo: YouTube bloqueo el cliente del plugin.
+
+- Solucion rapida: deja `DEFAULT_SEARCH_ENGINE=soundcloud` para que las busquedas por nombre no usen `ytsearch`.
+- Solucion completa en Lavalink: configura `poToken` o OAuth en `youtube-plugin` y confirma que el source de YouTube integrado de Lavalink este desactivado.
 
 ## Recomendado para Railway
 
