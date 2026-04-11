@@ -17,15 +17,6 @@ if (!process.env.LAVALINK_HOST || !process.env.LAVALINK_PASSWORD) {
   process.exit(1);
 }
 
-// ─── Colores ─────────────────────────────────────────────────────────────────
-const COLOR = {
-  GREEN:  0x1DB954,
-  BLUE:   0x5865F2,
-  YELLOW: 0xFEE75C,
-  RED:    0xED4245,
-  GRAY:   0x747F8D,
-};
-
 // ─── Cliente de Discord ───────────────────────────────────────────────────────
 const client = new Client({
   intents: [
