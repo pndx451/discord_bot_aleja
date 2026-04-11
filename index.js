@@ -110,7 +110,6 @@ client.kazagumo
       .setDescription('✅ Cola terminada. ¡Hasta la próxima!');
 
     channel.send({ embeds: [embed] });
-    player.destroy();
   })
   .on('playerClosed', (player) => {
     console.log(`[KAZAGUMO] Player cerrado para guild ${player.guildId}`);
@@ -148,7 +147,7 @@ for (const command of commands) {
 }
 
 // ─── Ready ────────────────────────────────────────────────────────────────────
-client.once('clientReady', async () => {
+client.once('ready', async () => {
   console.log(`Bot listo como ${client.user.tag}`);
 
   const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);

@@ -19,7 +19,7 @@ function getVoiceJoinError(interaction) {
   if (!perms?.has('ViewChannel')) return `Sin permiso para ver **${vc.name}**.`;
   if (!perms.has('Connect'))      return `Sin permiso para conectarme a **${vc.name}**.`;
   if (!perms.has('Speak'))        return `Sin permiso para hablar en **${vc.name}**.`;
-  if (vc.full && !perms.has('MoveMembers')) return `**${vc.name}** esta lleno.`;
+  if (vc.full && !perms.has('MoveMembers')) return `**${vc.name}** está lleno.`;
   return null;
 }
 
@@ -44,7 +44,7 @@ async function getOrCreatePlayer(interaction, client) {
 const play = {
   data: new SlashCommandBuilder()
     .setName('play')
-    .setDescription('Reproduce musica desde YouTube, Spotify o busqueda')
+    .setDescription('Reproduce música desde YouTube, Spotify o búsqueda')
     .addStringOption(o =>
       o.setName('query').setDescription('Nombre, URL de YouTube o Spotify').setRequired(true)
     ),
@@ -122,56 +122,56 @@ const play = {
 
 // ─── /skip ───────────────────────────────────────────────────────────────────
 const skip = {
-  data: new SlashCommandBuilder().setName('skip').setDescription('Salta la cancion actual'),
+  data: new SlashCommandBuilder().setName('skip').setDescription('Salta la canción actual'),
 
   async execute(interaction, client) {
     const player = client.kazagumo.players.get(interaction.guildId);
-    if (!player?.playing) return interaction.reply({ embeds: [errorEmbed('No hay musica en reproduccion.')], ephemeral: true });
+    if (!player?.playing) return interaction.reply({ embeds: [errorEmbed('No hay música en reproducción.')], ephemeral: true });
 
     const skipped = player.queue.current;
     player.skip();
-    return interaction.reply({ embeds: [successEmbed(`⏭ Saltada: **${skipped?.title || 'cancion'}**`)] });
+    return interaction.reply({ embeds: [successEmbed(`⏭ Saltada: **${skipped?.title || 'canción'}**`)] });
   },
 };
 
 // ─── /stop ───────────────────────────────────────────────────────────────────
 const stop = {
-  data: new SlashCommandBuilder().setName('stop').setDescription('Detiene la musica y limpia la cola'),
+  data: new SlashCommandBuilder().setName('stop').setDescription('Detiene la música y limpia la cola'),
 
   async execute(interaction, client) {
     const player = client.kazagumo.players.get(interaction.guildId);
-    if (!player) return interaction.reply({ embeds: [errorEmbed('No hay nada reproduciendose.')], ephemeral: true });
+    if (!player) return interaction.reply({ embeds: [errorEmbed('No hay nada reproduciéndose.')], ephemeral: true });
 
     player.destroy();
-    return interaction.reply({ embeds: [new EmbedBuilder().setColor(COLOR.RED).setDescription('⏹ Reproduccion detenida.')] });
+    return interaction.reply({ embeds: [new EmbedBuilder().setColor(COLOR.RED).setDescription('⏹ Reproducción detenida.')] });
   },
 };
 
 // ─── /pause ──────────────────────────────────────────────────────────────────
 const pause = {
-  data: new SlashCommandBuilder().setName('pause').setDescription('Pausa la reproduccion'),
+  data: new SlashCommandBuilder().setName('pause').setDescription('Pausa la reproducción'),
 
   async execute(interaction, client) {
     const player = client.kazagumo.players.get(interaction.guildId);
-    if (!player?.playing) return interaction.reply({ embeds: [errorEmbed('No hay nada reproduciendose.')], ephemeral: true });
-    if (player.paused) return interaction.reply({ embeds: [infoEmbed('Ya esta pausado.')], ephemeral: true });
+    if (!player?.playing) return interaction.reply({ embeds: [errorEmbed('No hay nada reproduciéndose.')], ephemeral: true });
+    if (player.paused) return interaction.reply({ embeds: [infoEmbed('Ya está pausado.')], ephemeral: true });
 
     player.pause(true);
-    return interaction.reply({ embeds: [new EmbedBuilder().setColor(COLOR.YELLOW).setDescription(`⏸ Pausado: **${player.queue.current?.title || 'cancion'}**`)] });
+    return interaction.reply({ embeds: [new EmbedBuilder().setColor(COLOR.YELLOW).setDescription(`⏸ Pausado: **${player.queue.current?.title || 'canción'}**`)] });
   },
 };
 
 // ─── /resume ─────────────────────────────────────────────────────────────────
 const resume = {
-  data: new SlashCommandBuilder().setName('resume').setDescription('Reanuda la reproduccion'),
+  data: new SlashCommandBuilder().setName('resume').setDescription('Reanuda la reproducción'),
 
   async execute(interaction, client) {
     const player = client.kazagumo.players.get(interaction.guildId);
     if (!player) return interaction.reply({ embeds: [errorEmbed('No hay nada en pausa.')], ephemeral: true });
-    if (!player.paused) return interaction.reply({ embeds: [infoEmbed('No esta pausado.')], ephemeral: true });
+    if (!player.paused) return interaction.reply({ embeds: [infoEmbed('No está pausado.')], ephemeral: true });
 
     player.pause(false);
-    return interaction.reply({ embeds: [successEmbed(`▶ Reanudado: **${player.queue.current?.title || 'cancion'}**`)] });
+    return interaction.reply({ embeds: [successEmbed(`▶ Reanudado: **${player.queue.current?.title || 'canción'}**`)] });
   },
 };
 
@@ -179,12 +179,12 @@ const resume = {
 const queueCmd = {
   data: new SlashCommandBuilder()
     .setName('queue')
-    .setDescription('Muestra la cola actual')
-    .addIntegerOption(o => o.setName('pagina').setDescription('Numero de pagina').setMinValue(1)),
+    .setDescription('Muestra la cola de reproducción actual')
+    .addIntegerOption(o => o.setName('pagina').setDescription('Número de página').setMinValue(1)),
 
   async execute(interaction, client) {
     const player = client.kazagumo.players.get(interaction.guildId);
-    if (!player?.queue.current) return interaction.reply({ embeds: [infoEmbed('La cola esta vacia.')], ephemeral: true });
+    if (!player?.queue.current) return interaction.reply({ embeds: [infoEmbed('La cola está vacía.')], ephemeral: true });
 
     const PAGE_SIZE = 10;
     const page = Math.max(0, (interaction.options.getInteger('pagina') || 1) - 1);
@@ -207,27 +207,27 @@ const queueCmd = {
 
     if (slice.length) {
       embed.addFields({
-        name: `Proximas — Pagina ${clampedPage + 1}/${totalPages}`,
+        name: `Próximas — Página ${clampedPage + 1}/${totalPages}`,
         value: slice.map((t, i) =>
           `\`${clampedPage * PAGE_SIZE + i + 1}.\` [${t.title}](${t.uri}) \`${formatDuration(t.length)}\``
         ).join('\n'),
       });
     } else {
-      embed.addFields({ name: 'Cola', value: 'No hay mas canciones.' });
+      embed.addFields({ name: 'Cola', value: 'No hay más canciones.' });
     }
 
-    embed.setFooter({ text: `${upcoming.length + 1} cancion(es) · Duracion total: ${formatDuration(totalMs)}` });
+    embed.setFooter({ text: `${upcoming.length + 1} canción(es) · Duración total: ${formatDuration(totalMs)}` });
     return interaction.reply({ embeds: [embed] });
   },
 };
 
 // ─── /nowplaying ─────────────────────────────────────────────────────────────
 const nowplaying = {
-  data: new SlashCommandBuilder().setName('nowplaying').setDescription('Muestra la cancion actual con barra de progreso'),
+  data: new SlashCommandBuilder().setName('nowplaying').setDescription('Muestra la canción actual con barra de progreso'),
 
   async execute(interaction, client) {
     const player = client.kazagumo.players.get(interaction.guildId);
-    if (!player?.queue.current) return interaction.reply({ embeds: [infoEmbed('No hay nada reproduciendose.')], ephemeral: true });
+    if (!player?.queue.current) return interaction.reply({ embeds: [infoEmbed('No hay nada reproduciéndose.')], ephemeral: true });
 
     const track = player.queue.current;
     const elapsed = player.shoukaku.position || 0;
@@ -235,7 +235,7 @@ const nowplaying = {
     const BAR = 20;
     const filled = total > 0 ? Math.round((elapsed / total) * BAR) : 0;
     const bar = '▓'.repeat(filled) + '░'.repeat(BAR - filled);
-    const loopLabels = { none: 'Off', track: 'Cancion', queue: 'Cola' };
+    const loopLabels = { none: 'Off', track: 'Canción', queue: 'Cola' };
 
     const embed = new EmbedBuilder()
       .setColor(COLOR.GREEN)
@@ -245,7 +245,7 @@ const nowplaying = {
       .setThumbnail(track.thumbnail || null)
       .setDescription(`\`${formatDuration(elapsed)}\` ${bar} \`${formatDuration(total)}\``)
       .addFields(
-        { name: '⏱ Duracion', value: track.isStream ? '🔴 En vivo' : formatDuration(track.length), inline: true },
+        { name: '⏱ Duración', value: track.isStream ? '🔴 En vivo' : formatDuration(track.length), inline: true },
         { name: '🔁 Loop', value: loopLabels[player.loop] || 'Off', inline: true },
         { name: '🔊 Volumen', value: `${player.volume}%`, inline: true },
       );
@@ -270,7 +270,7 @@ const volume = {
 
   async execute(interaction, client) {
     const player = client.kazagumo.players.get(interaction.guildId);
-    if (!player) return interaction.reply({ embeds: [errorEmbed('No hay nada reproduciendose.')], ephemeral: true });
+    if (!player) return interaction.reply({ embeds: [errorEmbed('No hay nada reproduciéndose.')], ephemeral: true });
 
     const level = interaction.options.getInteger('nivel', true);
     player.setVolume(level);
@@ -284,7 +284,7 @@ const volume = {
 const loop = {
   data: new SlashCommandBuilder()
     .setName('loop')
-    .setDescription('Cambia el modo de repeticion')
+    .setDescription('Cambia el modo de repetición')
     .addStringOption(o =>
       o.setName('modo').setDescription('Modo').setRequired(true)
         .addChoices(
@@ -296,11 +296,11 @@ const loop = {
 
   async execute(interaction, client) {
     const player = client.kazagumo.players.get(interaction.guildId);
-    if (!player) return interaction.reply({ embeds: [errorEmbed('No hay nada reproduciendose.')], ephemeral: true });
+    if (!player) return interaction.reply({ embeds: [errorEmbed('No hay nada reproduciéndose.')], ephemeral: true });
 
     const mode = interaction.options.getString('modo', true);
     player.setLoop(mode);
-    const labels = { none: '🚫 Loop desactivado', track: '🔂 Repitiendo cancion actual', queue: '🔁 Repitiendo toda la cola' };
+    const labels = { none: '🚫 Loop desactivado', track: '🔂 Repitiendo canción actual', queue: '🔁 Repitiendo toda la cola' };
     return interaction.reply({ embeds: [successEmbed(labels[mode])] });
   },
 };
