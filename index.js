@@ -189,15 +189,6 @@ client.on('error', error => console.error('Client error:', error));
 process.on('unhandledRejection', error => console.error('Unhandled rejection:', error));
 process.on('uncaughtException', error => console.error('Uncaught exception:', error));
 
-// ─── Helpers exportados ───────────────────────────────────────────────────────
-function formatDuration(ms) {
-  if (!ms) return '?';
-  const s = Math.floor(ms / 1000);
-  const m = Math.floor(s / 60);
-  const h = Math.floor(m / 60);
-  if (h > 0) return `${h}:${String(m % 60).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
-  return `${m}:${String(s % 60).padStart(2, '0')}`;
-}
 
 client.login(process.env.DISCORD_TOKEN).catch(error => {
   console.error('Fallo al iniciar el bot:', error);
