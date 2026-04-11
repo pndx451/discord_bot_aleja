@@ -1,4 +1,5 @@
 const { Client, GatewayIntentBits, Collection, EmbedBuilder } = require('discord.js');
+const { COLOR, formatDuration } = require('./utils');
 const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v10');
 const { Shoukaku, Connectors } = require('shoukaku');
@@ -156,7 +157,7 @@ for (const command of commands) {
 }
 
 // ─── Ready ────────────────────────────────────────────────────────────────────
-client.once('ready', async () => {
+client.once('clientReady', async () => {
   console.log(`Bot listo como ${client.user.tag}`);
 
   const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
@@ -206,8 +207,6 @@ function formatDuration(ms) {
   if (h > 0) return `${h}:${String(m % 60).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
   return `${m}:${String(s % 60).padStart(2, '0')}`;
 }
-
-module.exports = { formatDuration, COLOR };
 
 client.login(process.env.DISCORD_TOKEN).catch(error => {
   console.error('Fallo al iniciar el bot:', error);

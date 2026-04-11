@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const { formatDuration, COLOR } = require('./index');
+const { formatDuration, COLOR } = require('./utils');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function errorEmbed(desc) {
