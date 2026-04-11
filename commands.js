@@ -59,7 +59,17 @@ const play = {
 
     try {
       const player = await getOrCreatePlayer(interaction, client);
-      const result = await client.kazagumo.search(query, { requester: interaction.user });
+
+      // Determinar el engine correcto según el tipo de query
+      let searchEngine = 'youtube';
+      if (query.includes('spotify.com')) searchEngine = 'spotify';
+      else if (query.includes('youtu')) searchEngine = 'youtube';
+      else if (query.includes('soundcloud.com')) searchEngine = 'soundcloud';
+
+      const result = await client.kazagumo.search(query, {
+        requester: interaction.user,
+        engine: searchEngine,
+      });
 
       if (!result || !result.tracks.length) {
         return interaction.editReply({ embeds: [errorEmbed(`Sin resultados para: **${query}**`)] });
